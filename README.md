@@ -218,4 +218,4 @@ Yes. Provide an IPv6 literal or a hostname with AAAA records.
 Yes. Use `python syslog-pro.py ...` in PowerShell or CMD.
 
 ## License
-TBD by the repository owner (e.g., MIT, BSD‑2‑Clause, Apache‑2.0).
+MIT
