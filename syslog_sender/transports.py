@@ -3,7 +3,6 @@ from __future__ import annotations
 import ipaddress
 import socket
 import ssl
-from typing import Self
 
 from .models import SenderConfig
 
@@ -86,10 +85,3 @@ class SyslogTransport:
             finally:
                 self.socket = None
                 self.address = None
-
-    def __enter__(self) -> Self:
-        self.connect()
-        return self
-
-    def __exit__(self, *_: object) -> None:
-        self.close()
