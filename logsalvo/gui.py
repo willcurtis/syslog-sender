@@ -196,6 +196,11 @@ QPushButton#primaryButton {
 QPushButton#primaryButton:hover { background: #00c898; }
 QPushButton#dangerButton { border-color: #9e5260; color: #ffb6c1; min-width: 80px; }
 QPushButton#dangerButton:hover { background: #6d2633; border-color: #e26c7c; }
+QPushButton#receiverExpand:checked {
+    background: #073442;
+    color: #66f2ca;
+    border-color: #00a882;
+}
 QPushButton#linkButton {
     background: transparent;
     border: none;
@@ -327,6 +332,11 @@ QPushButton#primaryButton { background: #00a77f; color: #ffffff; border-color: #
 QPushButton#primaryButton:hover { background: #008f6c; }
 QPushButton#dangerButton { background: #fff4f5; border-color: #c95b6c; color: #a83245; }
 QPushButton#dangerButton:hover { background: #ffe4e8; border-color: #a83245; }
+QPushButton#receiverExpand:checked {
+    background: #d9f7ef;
+    color: #006b54;
+    border-color: #00a882;
+}
 QPushButton#linkButton { background: transparent; color: #007ca8; border: none; }
 QPushButton#linkButton:hover { color: #005b7c; }
 QLabel#statusPill { background: #e5f0f3; color: #526f79; border-color: #9cbfc9; }
@@ -620,6 +630,8 @@ def main() -> int:
             self.receiver_total = 0
             self.receiver_pending: list[ReceivedMessage] = []
             self.receiver_paused = False
+            self.receiver_log_expanded = False
+            self._receiver_splitter_sizes: list[int] = []
             self._build()
             self.preview()
 
@@ -935,8 +947,8 @@ def main() -> int:
             page_layout.setContentsMargins(0, 8, 0, 0)
             page_layout.setSpacing(12)
 
-            listener_group = QGroupBox("Listener")
-            listener_grid = QGridLayout(listener_group)
+            self.receiver_listener_group = QGroupBox("Listener")
+            listener_grid = QGridLayout(self.receiver_listener_group)
             listener_grid.setContentsMargins(18, 18, 18, 14)
             listener_grid.setHorizontalSpacing(12)
             listener_grid.setVerticalSpacing(10)
@@ -1024,7 +1036,7 @@ def main() -> int:
             privilege_help.setObjectName("listenerHelp")
             privilege_help.setWordWrap(True)
             listener_grid.addWidget(privilege_help, 3, 0, 1, 5)
-            page_layout.addWidget(listener_group)
+            page_layout.addWidget(self.receiver_listener_group)
 
             filter_group = QGroupBox("Find and filter")
             filter_layout = QHBoxLayout(filter_group)
@@ -1073,13 +1085,13 @@ def main() -> int:
                 "Select a received message to inspect parsed fields and the original payload."
             )
             self.receiver_detail.setMinimumHeight(130)
-            splitter = QSplitter(Qt.Orientation.Vertical)
-            splitter.addWidget(self.receiver_table)
-            splitter.addWidget(self.receiver_detail)
-            splitter.setStretchFactor(0, 4)
-            splitter.setStretchFactor(1, 1)
-            splitter.setSizes([480, 150])
-            page_layout.addWidget(splitter, 1)
+            self.receiver_splitter = QSplitter(Qt.Orientation.Vertical)
+            self.receiver_splitter.addWidget(self.receiver_table)
+            self.receiver_splitter.addWidget(self.receiver_detail)
+            self.receiver_splitter.setStretchFactor(0, 4)
+            self.receiver_splitter.setStretchFactor(1, 1)
+            self.receiver_splitter.setSizes([480, 150])
+            page_layout.addWidget(self.receiver_splitter, 1)
 
             footer = QHBoxLayout()
             self.receiver_summary = QLabel("Received 0 · Showing 0 · Malformed 0")
@@ -1087,12 +1099,21 @@ def main() -> int:
             self.receiver_pause = QPushButton("Pause display")
             self.receiver_pause.setCheckable(True)
             self.receiver_pause.toggled.connect(self.toggle_receiver_pause)
+            self.receiver_expand = QPushButton("Expand log view")
+            self.receiver_expand.setObjectName("receiverExpand")
+            self.receiver_expand.setCheckable(True)
+            self.receiver_expand.setAccessibleName("Expand received log view")
+            self.receiver_expand.setToolTip(
+                "Use more of the receiver page for incoming messages; select again to restore"
+            )
+            self.receiver_expand.toggled.connect(self.toggle_receiver_log_expansion)
             clear = QPushButton("Clear")
             clear.clicked.connect(self.clear_receiver_messages)
             export = QPushButton("Export filtered…")
             export.clicked.connect(self.export_receiver_messages)
             footer.addWidget(self.receiver_summary)
             footer.addStretch()
+            footer.addWidget(self.receiver_expand)
             footer.addWidget(self.receiver_pause)
             footer.addWidget(clear)
             footer.addWidget(export)
@@ -1110,6 +1131,22 @@ def main() -> int:
                     widget.currentTextChanged.connect(self.apply_receiver_filters)
             self.receiver_retention.valueChanged.connect(self.receiver_model.set_maximum)
             return page
+
+        @Slot(bool)
+        def toggle_receiver_log_expansion(self, expanded: bool) -> None:
+            self.receiver_log_expanded = expanded
+            if expanded:
+                self._receiver_splitter_sizes = self.receiver_splitter.sizes()
+                self.receiver_listener_group.hide()
+                self.receiver_detail.hide()
+                self.receiver_expand.setText("Restore layout")
+                self.receiver_expand.setAccessibleName("Restore receiver layout")
+            else:
+                self.receiver_listener_group.show()
+                self.receiver_detail.show()
+                self.receiver_splitter.setSizes(self._receiver_splitter_sizes or [480, 150])
+                self.receiver_expand.setText("Expand log view")
+                self.receiver_expand.setAccessibleName("Expand received log view")
 
         @Slot()
         def refresh_bind_addresses(self) -> None:

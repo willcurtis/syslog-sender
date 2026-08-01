@@ -149,7 +149,7 @@ For JSON payloads, common aliases such as `src`/`host`, `app`, `event`, `message
 
 UniFi support includes current Ubiquiti CEF/SIEM exports, CEF wrapped in an RFC 3164 envelope, UniFi's timestamp-and-host CEF envelope without a PRI header, access-point `MAC,device-firmware: process[pid]: message` records, and gateway `hostname process[pid]: message` records. CEF extensions are retained as structured JSON in the detail view and exported data.
 
-Select a row to inspect every parsed field and the original payload. The **Pause display** control keeps receiving into a bounded queue while holding the visible table steady; resume to add queued messages. **Clear** removes captured data from memory without stopping the listener.
+Select a row to inspect every parsed field and the original payload. Use **Expand log view** to hide the listener controls and detail pane temporarily, giving the table more room while retaining filters and capture actions. **Restore layout** brings back the original view and its previous splitter proportions. The **Pause display** control keeps receiving into a bounded queue while holding the visible table steady; resume to add queued messages. **Clear** removes captured data from memory without stopping the listener.
 
 ### Filtering and export
 
@@ -431,4 +431,4 @@ The legacy `syslog_sender.py` and standalone `syslog-pro.py` have been removed. 
 
 LogSalvo is released under the [MIT License](LICENSE).
 
-Copyright © 2025–2026 The Tech Shed. LogSalvo version 2.5.1.
+Copyright © 2025–2026 The Tech Shed. LogSalvo version 2.6.0.
