@@ -38,6 +38,8 @@ def test_gui_provides_distinct_light_and_dark_themes() -> None:
         assert "QTabBar#senderTabBar" in stylesheet
     assert "QTabBar::tab" not in THEME_STYLESHEETS["dark"]
     assert "QTabWidget#senderTabs::tab-bar { left: 0px; }" in THEME_STYLESHEETS["dark"]
+    for stylesheet in THEME_STYLESHEETS.values():
+        assert "QComboBox::drop-down" not in stylesheet
 
 
 def test_bind_addresses_are_deduplicated_and_ordered() -> None:

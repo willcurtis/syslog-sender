@@ -2,6 +2,17 @@
 
 All notable changes to LogSalvo are documented here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [2.5.1] - 2026-08-02
+
+### Fixed
+
+- Restored Qt's native combo-box drop-down affordance, which had been hidden by the shared theme stylesheet.
+- The populated bind-address selector is now visibly distinguishable from a plain text field in both themes.
+
+### Changed
+
+- Added an accessible name, explanatory tooltip, and bounded popup height to the bind-address selector.
+
 ## [2.5.0] - 2026-08-02
 
 ### Added
@@ -166,6 +177,7 @@ All notable changes to LogSalvo are documented here. The project follows [Semant
 
 - Initial UDP-based random syslog sender.
 
+[2.5.1]: https://github.com/willcurtis/logsalvo/compare/v2.5.0...v2.5.1
 [2.5.0]: https://github.com/willcurtis/logsalvo/compare/v2.4.2...v2.5.0
 [2.4.2]: https://github.com/willcurtis/logsalvo/compare/v2.4.1...v2.4.2
 [2.4.1]: https://github.com/willcurtis/logsalvo/compare/v2.4.0...v2.4.1
