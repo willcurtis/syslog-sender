@@ -31,8 +31,8 @@ logsalvo = "logsalvo.cli:main"
 logsalvo-gui = "logsalvo.gui:main"
 
 [project.urls]
-Homepage = "https://github.com/willcurtis/syslog-sender"
-Issues = "https://github.com/willcurtis/syslog-sender/issues"
+Homepage = "https://github.com/willcurtis/logsalvo"
+Issues = "https://github.com/willcurtis/logsalvo/issues"
 
 [tool.setuptools]
 packages = ["logsalvo"]

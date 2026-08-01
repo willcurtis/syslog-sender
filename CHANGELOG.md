@@ -124,12 +124,12 @@ All notable changes to LogSalvo are documented here. The project follows [Semant
 
 - Initial UDP-based random syslog sender.
 
-[2.3.1]: https://github.com/willcurtis/syslog-sender/compare/v2.3.0...v2.3.1
-[2.3.0]: https://github.com/willcurtis/syslog-sender/compare/v2.2.1...v2.3.0
-[2.2.1]: https://github.com/willcurtis/syslog-sender/compare/v2.2.0...v2.2.1
-[2.2.0]: https://github.com/willcurtis/syslog-sender/compare/a82f419...v2.2.0
-[2.1.1]: https://github.com/willcurtis/syslog-sender/compare/4e255fd...a82f419
-[2.1.0]: https://github.com/willcurtis/syslog-sender/compare/e10ab32...4e255fd
-[2.0.0]: https://github.com/willcurtis/syslog-sender/compare/6d298f3c...e10ab32
-[1.1.0]: https://github.com/willcurtis/syslog-sender/commits/6d298f3c
-[1.0.0]: https://github.com/willcurtis/syslog-sender/commits/a760f95c
+[2.3.1]: https://github.com/willcurtis/logsalvo/compare/v2.3.0...v2.3.1
+[2.3.0]: https://github.com/willcurtis/logsalvo/compare/v2.2.1...v2.3.0
+[2.2.1]: https://github.com/willcurtis/logsalvo/compare/v2.2.0...v2.2.1
+[2.2.0]: https://github.com/willcurtis/logsalvo/compare/a82f419...v2.2.0
+[2.1.1]: https://github.com/willcurtis/logsalvo/compare/4e255fd...a82f419
+[2.1.0]: https://github.com/willcurtis/logsalvo/compare/e10ab32...4e255fd
+[2.0.0]: https://github.com/willcurtis/logsalvo/compare/6d298f3c...e10ab32
+[1.1.0]: https://github.com/willcurtis/logsalvo/commits/6d298f3c
+[1.0.0]: https://github.com/willcurtis/logsalvo/commits/a760f95c
