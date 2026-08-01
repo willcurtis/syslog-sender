@@ -5,6 +5,7 @@ import pytest
 import logsalvo
 from logsalvo import __copyright__, __version__
 from logsalvo.cli import parser
+from logsalvo.gui import THEME_STYLESHEETS
 from logsalvo.models import FACILITIES, RunConfig, SenderConfig, named_number
 
 
@@ -25,6 +26,13 @@ def test_version_metadata_is_exposed_by_cli(capsys: pytest.CaptureFixture[str]) 
 def test_packaged_brand_asset_is_present() -> None:
     logo = Path(logsalvo.__file__).with_name("assets") / "tts-round-outline.png"
     assert logo.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+
+
+def test_gui_provides_distinct_light_and_dark_themes() -> None:
+    assert set(THEME_STYLESHEETS) == {"dark", "light"}
+    assert "background: #081820" in THEME_STYLESHEETS["dark"]
+    assert "background: #eef6f8" in THEME_STYLESHEETS["light"]
+    assert "QPushButton#themeSwitch" in THEME_STYLESHEETS["light"]
 
 
 @pytest.mark.parametrize(

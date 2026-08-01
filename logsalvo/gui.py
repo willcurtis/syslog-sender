@@ -209,7 +209,88 @@ QHeaderView::section {
 QSplitter::handle { background: #154052; height: 2px; }
 QLabel#listenerHelp { color: #7f9ca7; font-size: 11px; }
 QLabel#receiverSummary { color: #91c7d8; font-weight: 600; }
+QPushButton#themeSwitch {
+    background: #102b36;
+    color: #b8d0d9;
+    border: 1px solid #245567;
+    border-radius: 12px;
+    padding: 5px 11px;
+    min-width: 92px;
+    font-size: 11px;
+}
+QPushButton#themeSwitch:hover { border-color: #00b0f0; }
+QPushButton#themeSwitch:checked {
+    background: #dff8f1;
+    color: #07536a;
+    border-color: #00a77f;
+}
 """
+
+LIGHT_STYLESHEET = (
+    STYLESHEET
+    + """
+QWidget#appRoot { background: #eef6f8; color: #173440; }
+QFrame#brandHeader, QTabWidget::pane, QScrollArea#tabScroll,
+QScrollArea#tabScroll QWidget#qt_scrollarea_viewport, QWidget#tabPage,
+QWidget#workspacePage, QGroupBox { background: #ffffff; border-color: #b9d4dc; }
+QLabel#productName { color: #092a36; }
+QLabel#brandDescription { color: #587985; }
+QLabel#versionBadge { background: #e2f8f3; color: #007c60; border-color: #00a882; }
+QTabBar::tab { background: #dfecef; color: #526f79; border-color: #b9d4dc; }
+QTabBar::tab:selected { background: #ffffff; color: #007f64; border-top-color: #00a77f; }
+QTabBar::tab:hover:!selected { color: #007ca8; background: #edf7f9; }
+QGroupBox { color: #244a57; }
+QGroupBox::title, QLabel#tagline { color: #007ca8; }
+QLabel { color: #365965; }
+QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QPlainTextEdit {
+    background: #f8fcfd;
+    color: #153945;
+    border-color: #9cbfc9;
+    selection-background-color: #80d9ec;
+}
+QLineEdit:disabled, QComboBox:disabled, QSpinBox:disabled,
+QDoubleSpinBox:disabled, QPlainTextEdit:disabled { background: #e8f0f2; color: #839ba3; }
+QComboBox QAbstractItemView { background: #ffffff; color: #173440; border-color: #9cbfc9; selection-background-color: #c6edf5; }
+QCheckBox { color: #365965; }
+QCheckBox::indicator { background: #ffffff; border-color: #789faa; }
+QPushButton { background: #e5f0f3; color: #244a57; border-color: #91b4be; }
+QPushButton:hover { background: #d6e9ed; border-color: #007ca8; }
+QPushButton:pressed { background: #c7dde2; }
+QPushButton:disabled { color: #8aa0a7; background: #edf2f3; border-color: #c7d7db; }
+QPushButton#primaryButton { background: #00a77f; color: #ffffff; border-color: #007f64; }
+QPushButton#primaryButton:hover { background: #008f6c; }
+QPushButton#dangerButton { background: #fff4f5; border-color: #c95b6c; color: #a83245; }
+QPushButton#dangerButton:hover { background: #ffe4e8; border-color: #a83245; }
+QPushButton#linkButton { background: transparent; color: #007ca8; border: none; }
+QPushButton#linkButton:hover { color: #005b7c; }
+QLabel#statusPill { background: #e5f0f3; color: #526f79; border-color: #9cbfc9; }
+QLabel#statusPill[state="running"] { color: #005f82; border-color: #269ac2; background: #dff4fb; }
+QLabel#statusPill[state="success"] { color: #006c52; border-color: #28a786; background: #def7ef; }
+QLabel#statusPill[state="error"] { color: #9c2e40; border-color: #d97887; background: #ffe7eb; }
+QLabel#statusPill[state="stopping"] { color: #80540d; border-color: #d3a34f; background: #fff1d6; }
+QLabel#copyright, QLabel#listenerHelp { color: #6f8992; }
+QLabel#receiverSummary { color: #356575; }
+QScrollBar:vertical { background: #e6f0f2; }
+QScrollBar::handle:vertical { background: #91b4be; }
+QScrollBar::handle:vertical:hover { background: #00a77f; }
+QToolTip { background: #ffffff; color: #173440; border-color: #007ca8; }
+QTableView {
+    background: #ffffff;
+    alternate-background-color: #edf6f8;
+    color: #173440;
+    border-color: #9cbfc9;
+    gridline-color: #c9dde2;
+    selection-background-color: #bce8f1;
+    selection-color: #092a36;
+}
+QHeaderView::section { background: #dcecef; color: #285462; border-color: #aac7cf; }
+QSplitter::handle { background: #aac7cf; }
+QPushButton#themeSwitch { background: #dff8f1; color: #07536a; border-color: #00a77f; }
+QPushButton#themeSwitch:hover { background: #c8f1e7; border-color: #007f64; }
+"""
+)
+
+THEME_STYLESHEETS = {"dark": STYLESHEET, "light": LIGHT_STYLESHEET}
 
 
 def main() -> int:
@@ -218,6 +299,7 @@ def main() -> int:
             QAbstractTableModel,
             QModelIndex,
             QObject,
+            QSettings,
             QSortFilterProxyModel,
             Qt,
             QThread,
@@ -310,6 +392,7 @@ def main() -> int:
             super().__init__()
             self.messages: list[ReceivedMessage] = []
             self.maximum = maximum
+            self.theme = "dark"
 
         def rowCount(self, parent: QModelIndex | None = None) -> int:
             return 0 if parent is not None and parent.isValid() else len(self.messages)
@@ -343,7 +426,7 @@ def main() -> int:
             if role == Qt.ItemDataRole.UserRole:
                 return message
             if role == Qt.ItemDataRole.ForegroundRole and index.column() == 5:
-                colours = {
+                dark_colours = {
                     "emerg": "#ff6379",
                     "alert": "#ff7184",
                     "crit": "#ff8797",
@@ -353,8 +436,27 @@ def main() -> int:
                     "info": "#66f2ca",
                     "debug": "#91aeb9",
                 }
-                return QBrush(QColor(colours.get(message.severity_name, "#91aeb9")))
+                light_colours = {
+                    "emerg": "#a9152e",
+                    "alert": "#b51f38",
+                    "crit": "#bd2c43",
+                    "err": "#a83a4b",
+                    "warn": "#8a5a08",
+                    "notice": "#006a91",
+                    "info": "#00735a",
+                    "debug": "#526f79",
+                }
+                colours = light_colours if self.theme == "light" else dark_colours
+                fallback = "#526f79" if self.theme == "light" else "#91aeb9"
+                return QBrush(QColor(colours.get(message.severity_name, fallback)))
             return None
+
+        def set_theme(self, theme: str) -> None:
+            self.theme = theme
+            if self.messages:
+                top_left = self.index(0, 5)
+                bottom_right = self.index(len(self.messages) - 1, 5)
+                self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.ForegroundRole])
 
         def add_message(self, message: ReceivedMessage) -> None:
             while len(self.messages) >= self.maximum:
@@ -423,6 +525,9 @@ def main() -> int:
             super().__init__()
             self.logo_path = Path(__file__).with_name("assets") / "tts-round-outline.png"
             self.logo = QPixmap(str(self.logo_path))
+            self.settings = QSettings("The Tech Shed", __app_name__)
+            saved_theme = str(self.settings.value("appearance/theme", "dark")).lower()
+            self.theme = saved_theme if saved_theme in THEME_STYLESHEETS else "dark"
             self.setWindowTitle(f"{__app_name__} · Syslog Traffic Studio · v{__version__}")
             self.setWindowIcon(QIcon(str(self.logo_path)))
             self.resize(1080, 860)
@@ -514,7 +619,18 @@ def main() -> int:
             version = QLabel(f"VERSION {__version__}")
             version.setObjectName("versionBadge")
             version.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            header_layout.addWidget(version, alignment=Qt.AlignmentFlag.AlignTop)
+            header_controls = QVBoxLayout()
+            header_controls.setSpacing(8)
+            header_controls.addWidget(version, alignment=Qt.AlignmentFlag.AlignRight)
+            self.theme_switch = QPushButton()
+            self.theme_switch.setObjectName("themeSwitch")
+            self.theme_switch.setCheckable(True)
+            self.theme_switch.setChecked(self.theme == "light")
+            self.theme_switch.setAccessibleName("Use light mode")
+            self.theme_switch.setToolTip("Switch between dark and light appearance")
+            self.theme_switch.toggled.connect(self.apply_theme)
+            header_controls.addWidget(self.theme_switch, alignment=Qt.AlignmentFlag.AlignRight)
+            header_layout.addLayout(header_controls)
             layout.addWidget(header)
 
             workspace = QTabWidget()
@@ -711,10 +827,22 @@ def main() -> int:
             footer.addWidget(about_button)
             layout.addLayout(footer)
             self.setCentralWidget(root)
-            self.setStyleSheet(STYLESHEET)
+            self.apply_theme(self.theme == "light", persist=False)
             for widget in [self.format, self.facility, self.severity]:
                 widget.currentTextChanged.connect(self.preview)
             self.wire_size.valueChanged.connect(self.preview)
+
+        def apply_theme(self, light_mode: bool, *, persist: bool = True) -> None:
+            self.theme = "light" if light_mode else "dark"
+            self.theme_switch.setText("☀  Light mode" if light_mode else "☾  Dark mode")
+            self.theme_switch.setAccessibleDescription(
+                "Light mode is active" if light_mode else "Dark mode is active"
+            )
+            self.setStyleSheet(THEME_STYLESHEETS[self.theme])
+            if hasattr(self, "receiver_model"):
+                self.receiver_model.set_theme(self.theme)
+            if persist:
+                self.settings.setValue("appearance/theme", self.theme)
 
         def _build_receiver_page(self) -> QWidget:
             page = QWidget()
