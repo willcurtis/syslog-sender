@@ -1,221 +1,352 @@
-# syslog-pro — Professional Syslog Traffic Generator
+# Syslog Sender
 
-`syslog-pro.py` is a fast, dependency‑free CLI for generating syslog traffic to test and troubleshoot collectors, SIEMs, and log pipelines.
+Syslog Sender is a cross-platform Python application for generating controlled syslog traffic when testing collectors, SIEM platforms, firewall rules, parsers, alerts, and log pipelines. Version 2 provides both a command-line interface and a PySide6 desktop GUI over the same tested sender core.
 
-- **Formats:** RFC3164 (BSD) and RFC5424
-- **Transports:** UDP, TCP, **TLS** (6514) with RFC6587 framing (`octet` or `lf`)
-- **Controls:** Fixed delay or messages‑per‑second rate, total count or duration
-- **Templating:** `{seq}`, `{uuid}`, `{timestamp}`, `{randint:a:b}`, `{hostname}`, `{app}`, `{facility}`, `{severity}`
-- **Inputs:** Inline `-m`, file, or stdin
-- **Ops‑friendly:** Bind source IP, IPv4/IPv6, payload padding, dry‑run, verbose echo, useful stats
+## Highlights
 
-> Goal: predictable, standards‑compliant test traffic for real‑world troubleshooting.
+- RFC 3164 and RFC 5424 message generation
+- UDP, TCP, and TLS transports with IPv4 and IPv6 support
+- RFC 6587 octet-counted or line-feed TCP framing
+- Server certificate validation, custom CA, SNI override, and optional mTLS
+- Facility and severity selection by name or number
+- Reusable message templates and file-based message sets
+- Accurate rate, delay, count, and duration controls
+- TCP/TLS reconnects with configurable retries and backoff
+- Binding to a chosen local source address
+- Full encoded-payload padding for MTU and parser tests
+- Dry-run mode, message preview, progress statistics, and meaningful exit codes
+- Desktop GUI with profiles, live preview, message import, cancellation, and event log
+- No third-party runtime dependencies for CLI use
 
----
-
-## Contents
-- [Features](#features)
-- [Requirements](#requirements)
-- [Install](#install)
-- [Quick start](#quick-start)
-- [Usage](#usage)
-  - [CLI synopsis](#cli-synopsis)
-  - [Key options](#key-options)
-  - [Templating](#templating)
-  - [Transports & framing](#transports--framing)
-  - [TLS](#tls)
-  - [Binding source IP](#binding-source-ip)
-- [Examples](#examples)
-- [Structured Data (RFC5424)](#structured-data-rfc5424)
-- [Verification helpers](#verification-helpers)
-- [Troubleshooting](#troubleshooting)
-- [Exit status](#exit-status)
-- [FAQ](#faq)
-- [License](#license)
-
----
-
-## Features
-- RFC3164 and RFC5424 message building
-- UDP or TCP transport; **TLS** on TCP with server verification, SNI, optional client certs
-- RFC6587 framing for TCP: `--tcp-framing octet` (default) or `lf`
-- Facilities/severities by **name** or number
-- Message templating with runtime variables
-- Rate limiting (`--rate`) or fixed delay (`--delay`)
-- Stop by `--count` or `--duration`; repeat with `--interval`
-- Bind to specific local IP (v4/v6)
-- Payload padding (`--size`) to test MTU/fragmentation
-- `--echo`, `--dry-run`, `-v/--verbose` for visibility
-- No third‑party dependencies
+> [!CAUTION]
+> Only send test traffic to systems you own or are authorized to test. High message rates can overwhelm collectors, consume storage, or trigger production alerts.
 
 ## Requirements
-- Python **3.8+** on macOS, Linux, or Windows.
 
-## Install
-Download the script and make it executable:
-```bash
-curl -L -o syslog-pro.py "<your source or repo URL>"
-chmod +x syslog-pro.py
-./syslog-pro.py --help
-```
-> Or place it on your PATH, e.g. `/usr/local/bin/syslog-pro`.
+- Python 3.10 or newer
+- PySide6 only when using the GUI
 
-## Quick start
-Send 10 RFC3164 messages via UDP 514:
-```bash
-python3 syslog-pro.py 192.0.2.10 -n 10 --format 3164 --app test --facility local4 --severity info   -m "Smoke test {seq} {uuid}"
-```
+The CLI works on Windows, macOS, and Linux using the Python standard library.
 
-Send 100 RFC5424 messages over TCP (octet framing) to port 10514 at 50 msg/s:
+## Installation
+
+Clone and install the CLI:
+
 ```bash
-python3 syslog-pro.py loghost.example.com --transport tcp -p 10514 --format 5424   --msgid NETTEST --sd '[example@32473 site="UK" env="lab"]' -n 100 --rate 50
+git clone https://github.com/willcurtis/syslog-sender.git
+cd syslog-sender
+python3 -m venv .venv
+source .venv/bin/activate       # Windows PowerShell: .venv\Scripts\Activate.ps1
+python -m pip install .
 ```
 
-TLS (6514), verify server cert with custom CA:
+Install the GUI as well:
+
 ```bash
-python3 syslog-pro.py siem.company.tld --transport tcp --tls --cafile /path/ca.pem   --format 5424 -n 20 -m "TLS test {seq} at {timestamp}"
+python -m pip install '.[gui]'
 ```
 
-Pad to 1200 bytes and bind to a specific local IP:
+For development:
+
 ```bash
-python3 syslog-pro.py 198.51.100.5 --size 1200 --bind-ip 10.0.0.25 -n 5 --delay 0.2
+python -m pip install -e '.[dev,gui]'
 ```
 
-Read messages from a file and repeat every 60s:
+## First run
+
+Send ten RFC 3164 messages over UDP:
+
 ```bash
-python3 syslog-pro.py 192.0.2.10 --from-file msgs.txt --interval 60 --format 5424
+syslog-sender 192.0.2.10 --count 10 --message 'Test message {seq} {uuid}'
 ```
 
-## Usage
+Preview without transmitting:
 
-### CLI synopsis
+```bash
+syslog-sender 192.0.2.10 --dry-run --echo --count 3 \
+  --format 5424 --facility local4 --severity notice \
+  --message 'Configuration test {seq} at {timestamp}'
+```
+
+Start the desktop application:
+
+```bash
+syslog-sender-gui
+```
+
+## Desktop GUI
+
+The GUI separates configuration into Connection, Message, and Run tabs.
+
+1. Enter the collector address, port, and transport.
+2. Configure TLS and certificates when required.
+3. Choose RFC 3164 or RFC 5424 and set the header fields.
+4. Enter one or more message templates, or import a text file.
+5. Check the live encoded preview and byte count.
+6. Choose count, duration, rate, delay, retry, and dry-run settings.
+7. Select **Start**. Use **Stop** to cancel safely.
+
+Live statistics show attempted, successful, and failed messages plus effective rate. Profiles can be saved to JSON and loaded later. Certificate and key paths are saved, but certificate or private-key contents are never copied into a profile.
+
+The GUI warns before rates above 10,000 messages per second. Actual throughput depends on the operating system, transport, TLS, destination, and whether the live event log is displaying every message.
+
+## CLI reference
+
 ```text
-usage: syslog-pro.py [-h] [-p PORT] [--transport {udp,tcp}] [--tls]
+usage: syslog-sender [-h] [-p PORT] [--transport {udp,tcp}] [--tls]
                      [--cafile CAFILE] [--certfile CERTFILE] [--keyfile KEYFILE]
-                     [--insecure] [--sni SNI]
-                     [--tcp-framing {octet,lf}] [--bind-ip BIND_IP]
+                     [--insecure] [--sni SNI] [--tcp-framing {octet,lf}]
+                     [--bind-ip BIND_IP] [--timeout TIMEOUT] [--retries RETRIES]
                      [--format {3164,5424}] [--facility FACILITY]
-                     [--severity SEVERITY] [--app APP] [--hostname HOSTNAME]
+                     [--severity SEVERITY] [--hostname HOSTNAME] [--app APP]
                      [--procid PROCID] [--msgid MSGID] [--sd SD]
-                     [-m MESSAGE] [--from-file FROM_FILE] [--stdin]
-                     [-n COUNT] [--duration DURATION] [--rate RATE] [--delay DELAY]
-                     [--interval INTERVAL] [--size SIZE] [--echo] [--dry-run] [-v]
+                     [--wire-size WIRE_SIZE]
+                     [-m MESSAGE | --from-file FROM_FILE | --stdin]
+                     [-n COUNT] [--duration DURATION]
+                     [--rate RATE | --delay DELAY] [--dry-run] [--echo]
                      target
 ```
 
-### Key options
-- `target` — syslog server IP or hostname
-- `-p/--port` — destination port (default **514**; defaults to **6514** when `--tls` if port not set)
-- `--transport` — `udp` (default) or `tcp`
-- `--tls` — enable TLS (TCP only)
-- `--tcp-framing` — `octet` (default) or `lf`
-- `--format` — `3164` (default) or `5424`
-- `--facility` — name (`local0`, `auth`, `cron`, …) or number `0..23` (default `local0`)
-- `--severity` — name (`info`, `err`, `debug`, …) or number `0..7` (default `info`)
-- `--app` — app-name/tag (default `syslog-pro`)
-- `--hostname` — override hostname in messages
-- `--procid` — process ID (default: current PID)
-- `--msgid` — RFC5424 MSGID (default `TEST`)
-- `--sd` — RFC5424 Structured Data (see below)
-- `-m/--message` — message template (see [Templating](#templating))
-- `--from-file` / `--stdin` — message sources
-- `-n/--count` or `--duration` — send limit(s)
-- `--rate` or `--delay` — pacing (mutually exclusive)
-- `--interval` — repeat whole batch periodically
-- `--size` — minimum payload size (pads with spaces)
-- `--echo`, `--dry-run`, `-v/--verbose` — visibility and diagnostics
+### Connection options
 
-### Templating
-Variables you can embed in `-m`, file, or stdin lines:
-- `{seq}` — sequence number (per run)
-- `{uuid}` — random UUIDv4
-- `{timestamp}` — ISO8601 with milliseconds
-- `{randint:a:b}` — random integer in `[a, b]`
-- `{hostname}` / `{app}` — as provided
-- `{facility}` / `{severity}` — numeric values
+| Option | Description |
+| --- | --- |
+| `target` | Collector IP address or DNS name |
+| `-p`, `--port` | Destination port; defaults to 514, or 6514 with TLS |
+| `--transport` | `udp` or `tcp` |
+| `--tls` | Wrap a TCP connection in TLS |
+| `--tcp-framing` | RFC 6587 `octet` framing or newline-delimited `lf` framing |
+| `--bind-ip` | Bind to a specific local IPv4 or IPv6 source address |
+| `--timeout` | Connection/socket timeout in seconds |
+| `--retries` | Reconnect attempts per failed message; default 2 |
 
-Example:
+### TLS options
+
+| Option | Description |
+| --- | --- |
+| `--cafile` | Custom trusted CA bundle or certificate |
+| `--certfile` | Client certificate for mutual TLS |
+| `--keyfile` | Private key associated with the client certificate |
+| `--sni` | Override the TLS server name |
+| `--insecure` | Disable certificate and hostname verification; testing only |
+
+TLS requires TCP. An IP-address target does not automatically supply SNI; use `--sni` if the server certificate or virtual host requires a DNS name.
+
+### Message options
+
+| Option | Description |
+| --- | --- |
+| `--format` | `3164` or `5424` |
+| `--facility` | Name such as `local4` or number 0–23 |
+| `--severity` | Name such as `info`, `warn`, or number 0–7 |
+| `--hostname` | Hostname placed in the syslog header |
+| `--app` | RFC 5424 APP-NAME or RFC 3164 tag |
+| `--procid` | Process identifier |
+| `--msgid` | RFC 5424 message identifier |
+| `--sd` | RFC 5424 structured-data string |
+| `--wire-size` | Pad the complete UTF-8 encoded syslog payload to at least this many bytes |
+
+RFC 5424 header fields are checked for permitted characters and maximum lengths. Structured data must be `-` or bracketed data such as:
+
 ```bash
--m 'fw={hostname} app={app} sev={severity} id={uuid} cnt={seq} cpu={randint:10:98}'
+--sd '[example@32473 site="lon1" environment="lab"]'
 ```
 
-### Transports & framing
-- **UDP 514:** simple, can drop under load. Good for quick checks.
-- **TCP:** reliable. Use RFC6587 framing:
-  - `--tcp-framing octet` → `"<length> <payload>"` (default)
-  - `--tcp-framing lf` → payloads separated by `\n`
-- **TLS 6514:** secure syslog over TCP. Use `--cafile` to verify the server.
+### Message sources
 
-### TLS
-- `--cafile` — CA bundle or server cert for verification
-- `--certfile` / `--keyfile` — client certificate/key (mTLS)
-- `--insecure` — disable verification/hostname check (debug only)
-- `--sni` — override SNI name (defaults to target hostname)
+Sources are mutually exclusive:
 
-### Binding source IP
-Use `--bind-ip <ip>` to pick a local address (useful on multi‑homed hosts or where collectors filter by sender IP).
+- `--message` supplies one template.
+- `--from-file` reads one template per line.
+- `--stdin` reads templates from standard input.
+- With no source option, the built-in examples are cycled.
+
+An empty input is rejected instead of entering an unproductive loop. The included `msgs.txt` contains 1,500 JSON-style sample events and can be used directly:
+
+```bash
+syslog-sender 192.0.2.10 --from-file msgs.txt --count 100 --rate 25
+```
+
+### Template variables
+
+| Variable | Value |
+| --- | --- |
+| `{seq}` | Attempt sequence number |
+| `{uuid}` | New UUID v4 |
+| `{timestamp}` | ISO 8601 local timestamp with milliseconds |
+| `{randint:a:b}` | Random integer in the inclusive range `a` to `b` |
+| `{hostname}` | Configured hostname |
+| `{app}` | Configured application name |
+| `{facility}` | Numeric facility |
+| `{severity}` | Numeric severity |
+
+Example:
+
+```bash
+syslog-sender logs.example.net --format 5424 --count 50 --rate 10 \
+  --message 'probe={seq} correlation={uuid} cpu={randint:10:95}'
+```
+
+### Run controls
+
+- `--count` is the number of send attempts, not successful deliveries. This guarantees termination when a collector is unavailable.
+- `--count 0` is accepted only with a positive `--duration`.
+- `--duration` stops the run after the specified seconds and takes precedence when reached first.
+- `--rate` schedules an exact target messages-per-second cadence using a monotonic clock.
+- `--delay` sleeps for a fixed period after each attempt.
+- `--rate` and `--delay` cannot be combined.
 
 ## Examples
 
-LF framing (legacy collectors):
+RFC 5424 over TCP using octet-counted framing:
+
 ```bash
-python3 syslog-pro.py 192.0.2.10 --transport tcp --tcp-framing lf -n 20
+syslog-sender logs.example.net --transport tcp --port 10514 \
+  --format 5424 --count 100 --rate 50 --msgid NETTEST \
+  --sd '[example@32473 site="lon1"]'
 ```
 
-Loop a probe every minute, printing each payload:
+TLS with a private CA:
+
 ```bash
-python3 syslog-pro.py 192.0.2.10 --interval 60 --echo -n 5 -m "probe {seq} {timestamp}"
+syslog-sender logs.example.net --transport tcp --tls --cafile ./lab-ca.pem \
+  --format 5424 --count 20 --message 'TLS probe {seq}'
 ```
 
-Mix file and variables:
+Mutual TLS:
+
 ```bash
-python3 syslog-pro.py 192.0.2.10 --from-file alarms.txt --format 5424   --sd '[example@32473 pop="lon1" severity="{severity}"]'
+syslog-sender logs.example.net --transport tcp --tls \
+  --cafile ./ca.pem --certfile ./client.pem --keyfile ./client-key.pem \
+  --count 20
 ```
 
-## Structured Data (RFC5424)
-Pass raw SD with `--sd`. Example:
-```bash
---sd '[example@32473 iut="3" eventSource="App" eventID="1011"][meta@9999 env="dev" site="lon"]'
-```
-If omitted, `-` is sent per RFC5424.
+IPv6 with a selected source address:
 
-## Verification helpers
-UDP listener (Linux/macOS):
 ```bash
-nc -klu 0.0.0.0 514
+syslog-sender 2001:db8::50 --bind-ip 2001:db8::10 --count 5
 ```
-TCP listener:
+
+Generate for 30 seconds regardless of count:
+
 ```bash
-nc -kl 0.0.0.0 10514
+syslog-sender 192.0.2.10 --count 0 --duration 30 --rate 100
 ```
-OpenSSL TLS test server (for connectivity only):
+
+Pipe messages from another program:
+
 ```bash
-openssl s_server -accept 6514 -quiet -cert server.pem -key server.key
+printf 'first {seq}\nsecond {seq}\n' | \
+  syslog-sender 192.0.2.10 --stdin --count 10 --delay 0.2
+```
+
+## Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| `0` | All attempted messages were sent, or dry-run completed |
+| `1` | Connection, TLS, formatting, or send failure |
+| `2` | Invalid arguments, configuration, or input source |
+| `130` | Interrupted from the CLI |
+
+UDP success means that the local operating system accepted the datagram; UDP does not provide collector acknowledgements.
+
+## Verification listeners
+
+UDP on Linux:
+
+```bash
+nc -klu 514
+```
+
+TCP with LF framing:
+
+```bash
+nc -kl 10514
+syslog-sender 127.0.0.1 --transport tcp --tcp-framing lf --port 10514 --count 5
+```
+
+TLS test endpoint:
+
+```bash
+openssl s_server -accept 6514 -quiet -cert server.pem -key server-key.pem
 ```
 
 ## Troubleshooting
-- **No ingestion over TCP:** framing mismatch. Align `--tcp-framing` with the collector.
-- **Weird timestamps:** RFC3164 lacks year/timezone. Prefer `--format 5424`.
-- **UDP drops:** expected under load. Use TCP/TLS to test reliability.
-- **TLS handshake fails:** wrong CA or SNI. Provide `--cafile` and check `--sni`.
-- **Nothing arrives:** check firewall/NAT; confirm the collector ingest port.
-- **Filtered by source IP:** set `--bind-ip`.
 
-## Exit status
-The tool prints totals, errors, elapsed time, and effective rate. Current behavior uses exit code `0` regardless of send errors. For CI usage, you can modify the end of `main()` to exit non‑zero if `errors > 0`.
+**The collector receives nothing**
 
-## FAQ
-**Does it generate JSON automatically?**  
-No. Use templates to embed JSON yourself.
+- Confirm the correct destination port, firewall policy, and ingest listener.
+- Use `--echo` to inspect locally generated payloads.
+- Try a local `nc` listener to separate generator and network issues.
+- Remember that binding a source address requires that address to exist locally.
 
-**Randomize severity/facility per message?**  
-Not built‑in. Provide multiple lines in a file and send at a rate/duration.
+**TCP connects but messages are not parsed**
 
-**IPv6?**  
-Yes. Provide an IPv6 literal or a hostname with AAAA records.
+- Match `--tcp-framing octet` or `--tcp-framing lf` to the collector configuration.
+- Confirm whether the collector expects RFC 3164 or RFC 5424.
 
-**Windows?**  
-Yes. Use `python syslog-pro.py ...` in PowerShell or CMD.
+**TLS fails**
+
+- Verify the CA chain and target hostname.
+- Use `--sni` when connecting to an IP address or alternate DNS name.
+- Use `--insecure` only to isolate verification problems in a controlled lab.
+
+**The achieved rate is lower than requested**
+
+- Disable `--echo` and avoid displaying every message in the GUI.
+- TLS, message size, retries, operating-system buffers, and collector capacity limit throughput.
+- UDP can be dropped silently under load.
+
+## Development
+
+Install development dependencies and run the checks:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e '.[dev]'
+ruff check .
+pytest
+```
+
+Tests include message formatting, field validation, template expansion, pacing, failure termination, duration control, and a real local UDP integration test. GitHub Actions runs linting and tests on Python 3.10–3.13.
+
+The main components are:
+
+```text
+syslog_sender/
+├── cli.py          command-line adapter
+├── gui.py          PySide6 desktop adapter
+├── formatters.py   RFC 3164/5424 encoding
+├── models.py       validated configuration and statistics
+├── sender.py       pacing, retry, cancellation, and orchestration
+├── templates.py    template expansion and examples
+└── transports.py   UDP, TCP, TLS, framing, and address binding
+```
+
+## Building a desktop executable
+
+PyInstaller can create a standalone executable. Install it alongside the GUI extra, then run:
+
+```bash
+python -m pip install '.[gui]' pyinstaller
+pyinstaller --windowed --name syslog-sender-gui \
+  --collect-all PySide6 "$(command -v syslog-sender-gui)"
+```
+
+PyInstaller options and signing/notarization requirements differ by operating system. Build and test on each target platform rather than cross-compiling.
+
+## Migrating from the old scripts
+
+The legacy `syslog_sender.py` and standalone `syslog-pro.py` have been removed. After installation:
+
+- Replace `python syslog-pro.py HOST ...` with `syslog-sender HOST ...`.
+- Replace `--size` with the unambiguous `--wire-size`.
+- Counts now measure attempts and always terminate despite send errors.
+- Invalid negative values now fail rather than acting as undocumented infinite modes.
+- Use `syslog-sender-gui` for the desktop interface.
 
 ## License
-MIT
+
+Syslog Sender is released under the [MIT License](LICENSE).

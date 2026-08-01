@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "syslog-sender"
+version = "2.0.0"
+description = "Standards-aware syslog traffic generator with CLI and desktop GUI"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "Will Curtis"}]
+keywords = ["syslog", "rfc3164", "rfc5424", "testing", "siem"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: System :: Logging",
+]
+dependencies = []
+
+[project.optional-dependencies]
+gui = ["PySide6>=6.7"]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.scripts]
+syslog-sender = "syslog_sender.cli:main"
+syslog-sender-gui = "syslog_sender.gui:main"
+
+[project.urls]
+Homepage = "https://github.com/willcurtis/syslog-sender"
+Issues = "https://github.com/willcurtis/syslog-sender/issues"
+
+[tool.setuptools]
+packages = ["syslog_sender"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
