@@ -2,6 +2,15 @@
 
 All notable changes to LogSalvo are documented here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [2.1.1] - 2026-08-01
+
+### Fixed
+
+- Configuration fields now expand to use the available tab width instead of retaining compact Qt size hints.
+- Increased input height, form margins, and row spacing for clearer scanning and easier interaction.
+- Added responsive label wrapping and vertical scrolling for smaller windows.
+- Increased message-editor and event-log working space.
+
 ## [2.1.0] - 2026-08-01
 
 ### Added
@@ -64,7 +73,8 @@ All notable changes to LogSalvo are documented here. The project follows [Semant
 
 - Initial UDP-based random syslog sender.
 
-[2.1.0]: https://github.com/willcurtis/syslog-sender/compare/e10ab32...v2.1.0
+[2.1.1]: https://github.com/willcurtis/syslog-sender/compare/4e255fd...v2.1.1
+[2.1.0]: https://github.com/willcurtis/syslog-sender/compare/e10ab32...4e255fd
 [2.0.0]: https://github.com/willcurtis/syslog-sender/compare/6d298f3c...e10ab32
 [1.1.0]: https://github.com/willcurtis/syslog-sender/commits/6d298f3c
 [1.0.0]: https://github.com/willcurtis/syslog-sender/commits/a760f95c

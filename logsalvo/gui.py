@@ -50,6 +50,11 @@ QTabWidget::pane {
     border-radius: 10px;
     top: -1px;
 }
+QScrollArea#tabScroll, QScrollArea#tabScroll QWidget#qt_scrollarea_viewport,
+QWidget#tabPage {
+    background: #0b202b;
+    border: none;
+}
 QTabBar::tab {
     background: #0a1b24;
     color: #7f9ca7;
@@ -90,6 +95,7 @@ QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QPlainTextEdit {
     border-radius: 6px;
     padding: 7px 9px;
     selection-background-color: #007f9e;
+    min-height: 22px;
 }
 QLineEdit:focus, QComboBox:focus, QSpinBox:focus,
 QDoubleSpinBox:focus, QPlainTextEdit:focus {
@@ -196,6 +202,8 @@ def main() -> int:
             QMessageBox,
             QPlainTextEdit,
             QPushButton,
+            QScrollArea,
+            QSizePolicy,
             QSpinBox,
             QTabWidget,
             QVBoxLayout,
@@ -254,8 +262,37 @@ def main() -> int:
 
         def _line(self, value: str = "") -> QLineEdit:
             widget = QLineEdit(value)
+            self._expand_field(widget)
             widget.textChanged.connect(self.preview)
             return widget
+
+        def _expand_field(self, widget: QWidget, minimum_width: int = 440) -> None:
+            widget.setMinimumWidth(minimum_width)
+            widget.setMinimumHeight(38)
+            widget.setSizePolicy(
+                QSizePolicy.Policy.Expanding,
+                QSizePolicy.Policy.Fixed,
+            )
+
+        def _form(self, parent: QWidget | None = None) -> QFormLayout:
+            form = QFormLayout(parent)
+            form.setContentsMargins(32, 28, 32, 28)
+            form.setHorizontalSpacing(22)
+            form.setVerticalSpacing(14)
+            form.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            form.setFormAlignment(Qt.AlignmentFlag.AlignTop)
+            form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+            form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
+            return form
+
+        def _scrollable_tab(self, content: QWidget) -> QScrollArea:
+            scroll = QScrollArea()
+            scroll.setObjectName("tabScroll")
+            scroll.setWidgetResizable(True)
+            scroll.setFrameShape(QFrame.Shape.NoFrame)
+            scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            scroll.setWidget(content)
+            return scroll
 
         def _build(self) -> None:
             root = QWidget()
@@ -303,19 +340,25 @@ def main() -> int:
 
             tabs = QTabWidget()
             tabs.setDocumentMode(True)
-            layout.addWidget(tabs)
+            tabs.setMinimumHeight(420)
+            layout.addWidget(tabs, 3)
 
             connection = QWidget()
-            connection_form = QFormLayout(connection)
+            connection.setObjectName("tabPage")
+            connection_form = self._form(connection)
             self.target = self._line("127.0.0.1")
             self.port = QSpinBox()
             self.port.setRange(1, 65535)
             self.port.setValue(514)
+            self._expand_field(self.port)
             self.transport = QComboBox()
             self.transport.addItems(["udp", "tcp"])
+            self._expand_field(self.transport)
             self.tls = QCheckBox("Enable TLS")
+            self.tls.setMinimumHeight(38)
             self.framing = QComboBox()
             self.framing.addItems(["octet", "lf"])
+            self._expand_field(self.framing)
             self.bind_ip = self._line()
             self.cafile = self._line()
             self.certfile = self._line()
@@ -336,17 +379,24 @@ def main() -> int:
                 ("TLS verification", self.insecure),
             ]:
                 connection_form.addRow(label, widget)
-            tabs.addTab(connection, "Connection")
+            tabs.addTab(self._scrollable_tab(connection), "Connection")
 
             message_tab = QWidget()
+            message_tab.setObjectName("tabPage")
             message_layout = QVBoxLayout(message_tab)
-            message_form = QFormLayout()
+            message_layout.setContentsMargins(32, 28, 32, 24)
+            message_layout.setSpacing(14)
+            message_form = self._form()
+            message_form.setContentsMargins(0, 0, 0, 0)
             self.format = QComboBox()
             self.format.addItems(["3164", "5424"])
+            self._expand_field(self.format)
             self.facility = QComboBox()
             self.facility.addItems(FACILITIES)
+            self._expand_field(self.facility)
             self.severity = QComboBox()
             self.severity.addItems(SEVERITIES)
+            self._expand_field(self.severity)
             self.severity.setCurrentText("info")
             self.hostname = self._line(socket.gethostname())
             self.app = self._line("logsalvo")
@@ -355,6 +405,7 @@ def main() -> int:
             self.sd = self._line("-")
             self.wire_size = QSpinBox()
             self.wire_size.setRange(0, 65507)
+            self._expand_field(self.wire_size)
             for label, widget in [
                 ("Format", self.format),
                 ("Facility", self.facility),
@@ -369,33 +420,45 @@ def main() -> int:
                 message_form.addRow(label, widget)
             message_layout.addLayout(message_form)
             self.messages = QPlainTextEdit("Test event {seq} id={uuid} at {timestamp}")
+            self.messages.setMinimumHeight(140)
+            self.messages.setSizePolicy(
+                QSizePolicy.Policy.Expanding,
+                QSizePolicy.Policy.Expanding,
+            )
             self.messages.textChanged.connect(self.preview)
             message_layout.addWidget(QLabel("Messages (one template per line)"))
             message_layout.addWidget(self.messages)
             import_button = QPushButton("Import message file")
             import_button.clicked.connect(self.import_messages)
             message_layout.addWidget(import_button)
-            tabs.addTab(message_tab, "Message")
+            tabs.addTab(self._scrollable_tab(message_tab), "Message")
 
             run_tab = QWidget()
-            run_form = QFormLayout(run_tab)
+            run_tab.setObjectName("tabPage")
+            run_form = self._form(run_tab)
             self.count = QSpinBox()
             self.count.setRange(0, 10_000_000)
             self.count.setValue(10)
+            self._expand_field(self.count)
             self.duration = QDoubleSpinBox()
             self.duration.setRange(0, 86400)
             self.duration.setSuffix(" s")
+            self._expand_field(self.duration)
             self.rate = QDoubleSpinBox()
             self.rate.setRange(0, 1_000_000)
             self.rate.setSuffix(" msg/s")
+            self._expand_field(self.rate)
             self.delay = QDoubleSpinBox()
             self.delay.setRange(0, 3600)
             self.delay.setDecimals(3)
             self.delay.setSuffix(" s")
+            self._expand_field(self.delay)
             self.retries = QSpinBox()
             self.retries.setRange(0, 20)
             self.retries.setValue(2)
+            self._expand_field(self.retries)
             self.dry_run = QCheckBox("Build messages without sending")
+            self.dry_run.setMinimumHeight(38)
             for label, widget in [
                 ("Attempt count", self.count),
                 ("Duration", self.duration),
@@ -405,7 +468,7 @@ def main() -> int:
                 ("Dry run", self.dry_run),
             ]:
                 run_form.addRow(label, widget)
-            tabs.addTab(run_tab, "Run")
+            tabs.addTab(self._scrollable_tab(run_tab), "Run")
 
             preview_group = QGroupBox("Live preview")
             preview_group.setObjectName("previewGroup")
@@ -440,6 +503,7 @@ def main() -> int:
             layout.addWidget(self.status)
             self.log = QPlainTextEdit()
             self.log.setReadOnly(True)
+            self.log.setMinimumHeight(120)
             self.log.setPlaceholderText("Transmission events and errors will appear here.")
             layout.addWidget(self.log)
 
