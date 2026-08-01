@@ -106,6 +106,70 @@ def test_invalid_priority_is_not_reported_as_valid() -> None:
     assert parsed.parse_error
 
 
+def test_parse_unifi_cef_message() -> None:
+    parsed = parse_syslog(
+        b"CEF:0|Ubiquiti|UniFi Network|9.3.33|401|WiFi Client Disconnected|2|"
+        b"UNIFIcategory=Monitoring UNIFIsubCategory=WiFi UNIFIhost=Office UDM Pro "
+        b"UNIFIclientHostname=Craig Watch src=192.0.2.60 "
+        b"msg=Craig Watch disconnected from Employee WiFi.",
+        sender="192.0.2.60",
+        sender_port=514,
+        protocol="udp",
+    )
+    assert parsed.format == "UniFi CEF"
+    assert parsed.hostname == "Office UDM Pro"
+    assert parsed.app == "UniFi Network"
+    assert parsed.msgid == "401"
+    assert parsed.severity_name == "info"
+    assert parsed.message == "Craig Watch disconnected from Employee WiFi."
+    assert "UNIFIcategory" in parsed.structured_data
+    assert not parsed.parse_error
+
+
+def test_parse_rfc3164_wrapped_unifi_cef_message() -> None:
+    parsed = parse_syslog(
+        b"<134>Aug  1 12:30:00 console CEF:0|Ubiquiti|UniFi Network|9.3.33|544|"
+        b"Admin Accessed UniFi Network|1|UNIFIhost=Office UDM Pro msg=Admin logged in",
+        sender="192.0.2.61",
+        sender_port=514,
+        protocol="udp",
+    )
+    assert parsed.format == "UniFi CEF"
+    assert parsed.priority == 134
+    assert parsed.hostname == "Office UDM Pro"
+    assert parsed.timestamp == "Aug  1 12:30:00"
+    assert parsed.message == "Admin logged in"
+
+
+def test_parse_unifi_access_point_device_log() -> None:
+    parsed = parse_syslog(
+        b"<30>6c63f8863465,U7-Pro-Wall-8.3.2+18064: hostapd[5343]: wifi1ap6: STA connected",
+        sender="192.0.2.62",
+        sender_port=514,
+        protocol="udp",
+    )
+    assert parsed.format == "UniFi device"
+    assert parsed.hostname == "U7-Pro-Wall-8.3.2+18064"
+    assert parsed.app == "hostapd"
+    assert parsed.procid == "5343"
+    assert parsed.message == "wifi1ap6: STA connected"
+    assert parsed.structured_data == "device_mac=6c63f8863465"
+
+
+def test_parse_unifi_gateway_device_log() -> None:
+    parsed = parse_syslog(
+        b"UCG-Fiber bash[2616997]: HISTORY: admin ran a command",
+        sender="192.0.2.63",
+        sender_port=514,
+        protocol="udp",
+    )
+    assert parsed.format == "UniFi device"
+    assert parsed.hostname == "UCG-Fiber"
+    assert parsed.app == "bash"
+    assert parsed.procid == "2616997"
+    assert parsed.message == "HISTORY: admin ran a command"
+
+
 def test_udp_receiver_delivers_message() -> None:
     port = free_port(socket.SOCK_DGRAM)
     received = []

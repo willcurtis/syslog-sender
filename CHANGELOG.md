@@ -2,6 +2,18 @@
 
 All notable changes to LogSalvo are documented here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [2.3.0] - 2026-08-01
+
+### Added
+
+- UniFi CEF/SIEM parsing, including CEF records wrapped in RFC 3164 envelopes.
+- UniFi access-point and gateway device-log parsing for their distinct identity and process layouts.
+- Generic CEF header and extension parsing with original CEF severity retained in structured data.
+
+### Changed
+
+- UniFi host, product, event ID, message, process, device identity, and severity fields now populate the receiver view and exports instead of appearing as an opaque raw message.
+
 ## [2.2.1] - 2026-08-01
 
 ### Fixed
@@ -105,6 +117,7 @@ All notable changes to LogSalvo are documented here. The project follows [Semant
 
 - Initial UDP-based random syslog sender.
 
+[2.3.0]: https://github.com/willcurtis/syslog-sender/compare/v2.2.1...v2.3.0
 [2.2.1]: https://github.com/willcurtis/syslog-sender/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/willcurtis/syslog-sender/compare/a82f419...v2.2.0
 [2.1.1]: https://github.com/willcurtis/syslog-sender/compare/4e255fd...a82f419
