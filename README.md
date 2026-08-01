@@ -12,13 +12,17 @@ LogSalvo uses The Tech Shed visual identity: deep navy, cyan and teal. The suppl
 
 Configure the destination, transport, message format, templates, and run controls while reviewing the exact encoded message in the live preview.
 
-![LogSalvo Send workspace showing connection settings, live preview, run status, and event log](docs/images/logsalvo-send.png)
+| Dark mode | Light mode |
+| --- | --- |
+| ![LogSalvo Send workspace in Dark mode](docs/images/logsalvo-send-dark.png) | ![LogSalvo Send workspace in Light mode](docs/images/logsalvo-send-light.png) |
 
 ### Receive workspace
 
 Listen on a configurable address, port, and protocol; inspect incoming messages; filter the live table; and export the visible results.
 
-![LogSalvo Receive workspace showing listener controls, message filters, parsed syslog table, and message detail](docs/images/logsalvo-receive.png)
+| Dark mode | Light mode |
+| --- | --- |
+| ![LogSalvo Receive workspace in Dark mode](docs/images/logsalvo-receive-dark.png) | ![LogSalvo Receive workspace in Light mode](docs/images/logsalvo-receive-light.png) |
 
 ## Highlights
 
