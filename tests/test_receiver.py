@@ -141,6 +141,30 @@ def test_parse_rfc3164_wrapped_unifi_cef_message() -> None:
     assert parsed.message == "Admin logged in"
 
 
+def test_parse_unifi_cef_with_bsd_envelope_without_priority() -> None:
+    parsed = parse_syslog(
+        b"Aug 01 23:12:41 site-udm CEF:0|Ubiquiti|UniFi Network|10.5.67|546|"
+        b"Config Modified|5|UNIFIcategory=Audit UNIFIhost=site-udm "
+        b"UNIFIsettingsChanges=cron_expr: 0 5 * * * UNIFIaccessMethod=web "
+        b"UNIFIsettingsSection=Internet UNIFIadmin=Admin src=192.0.2.70 "
+        b"UNIFIutcTime=2026-08-01T22:12:41.222Z "
+        b"msg=Admin made a change to Internet settings.",
+        sender="192.0.2.1",
+        sender_port=35207,
+        protocol="udp",
+    )
+    assert parsed.format == "UniFi CEF"
+    assert parsed.priority is None
+    assert parsed.timestamp == "Aug 01 23:12:41"
+    assert parsed.hostname == "site-udm"
+    assert parsed.app == "UniFi Network"
+    assert parsed.msgid == "546"
+    assert parsed.severity_name == "warn"
+    assert parsed.message == "Admin made a change to Internet settings."
+    assert "cron_expr: 0 5 * * *" in parsed.structured_data
+    assert not parsed.parse_error
+
+
 def test_parse_unifi_access_point_device_log() -> None:
     parsed = parse_syslog(
         b"<30>6c63f8863465,U7-Pro-Wall-8.3.2+18064: hostapd[5343]: wifi1ap6: STA connected",

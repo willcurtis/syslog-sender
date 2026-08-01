@@ -37,6 +37,10 @@ UNIFI_GATEWAY = re.compile(
     r"(?P<app>[^\s:\[]+)(?:\[(?P<procid>[^\]]+)\])?:\s*(?P<message>.*)$",
     re.IGNORECASE,
 )
+CEF_BSD_ENVELOPE = re.compile(
+    r"^(?P<timestamp>[A-Z][a-z]{2}\s+[ \d]\d\s+\d{2}:\d{2}:\d{2})\s+"
+    r"(?P<hostname>\S+)\s+(?P<cef>CEF:.*)$"
+)
 CEF_EXTENSION_KEY = re.compile(r"(?:^|\s)(?P<key>[A-Za-z][A-Za-z0-9_]*)=")
 
 FACILITY_NAMES = [
@@ -330,6 +334,22 @@ def parse_syslog(
     else:
         facility = severity = None
         facility_name = severity_name = "unknown"
+
+    cef_envelope = CEF_BSD_ENVELOPE.match(body)
+    if cef_envelope:
+        cef_message = _parse_cef(
+            cef_envelope.group("cef"),
+            received=received,
+            sender=sender,
+            sender_port=sender_port,
+            protocol=protocol,
+            raw=raw,
+            priority=priority,
+            timestamp=cef_envelope.group("timestamp"),
+            envelope_hostname=cef_envelope.group("hostname"),
+        )
+        if cef_message is not None:
+            return cef_message
 
     cef_message = _parse_cef(
         body,
