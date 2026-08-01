@@ -8,6 +8,14 @@ from pathlib import Path
 from . import __app_name__, __copyright__, __version__
 from .formatters import build_message
 from .models import FACILITIES, SEVERITIES, MessageConfig, RunConfig, SenderConfig
+from .receiver import (
+    FACILITY_NAMES,
+    SEVERITY_NAMES,
+    ReceivedMessage,
+    ReceiverConfig,
+    SyslogReceiver,
+    export_messages,
+)
 from .sender import Sender
 
 STYLESHEET = """
@@ -179,14 +187,46 @@ QToolTip {
     border: 1px solid #00b0f0;
     padding: 5px;
 }
+QTableView {
+    background: #07151c;
+    alternate-background-color: #0a1d26;
+    color: #dcecf2;
+    border: 1px solid #1a4758;
+    border-radius: 7px;
+    gridline-color: #123440;
+    selection-background-color: #07536a;
+    selection-color: #ffffff;
+}
+QHeaderView::section {
+    background: #102b36;
+    color: #91c7d8;
+    border: none;
+    border-right: 1px solid #1a4758;
+    border-bottom: 1px solid #1a4758;
+    padding: 8px;
+    font-weight: 700;
+}
+QSplitter::handle { background: #154052; height: 2px; }
+QLabel#listenerHelp { color: #7f9ca7; font-size: 11px; }
+QLabel#receiverSummary { color: #91c7d8; font-weight: 600; }
 """
 
 
 def main() -> int:
     try:
-        from PySide6.QtCore import QObject, Qt, QThread, Signal, Slot
-        from PySide6.QtGui import QIcon, QPixmap
+        from PySide6.QtCore import (
+            QAbstractTableModel,
+            QModelIndex,
+            QObject,
+            QSortFilterProxyModel,
+            Qt,
+            QThread,
+            Signal,
+            Slot,
+        )
+        from PySide6.QtGui import QBrush, QColor, QIcon, QPixmap
         from PySide6.QtWidgets import (
+            QAbstractItemView,
             QApplication,
             QCheckBox,
             QComboBox,
@@ -194,8 +234,10 @@ def main() -> int:
             QFileDialog,
             QFormLayout,
             QFrame,
+            QGridLayout,
             QGroupBox,
             QHBoxLayout,
+            QHeaderView,
             QLabel,
             QLineEdit,
             QMainWindow,
@@ -205,6 +247,8 @@ def main() -> int:
             QScrollArea,
             QSizePolicy,
             QSpinBox,
+            QSplitter,
+            QTableView,
             QTabWidget,
             QVBoxLayout,
             QWidget,
@@ -246,6 +290,134 @@ def main() -> int:
         def cancel(self) -> None:
             self.sender.cancel()
 
+    class ReceiverBridge(QObject):
+        message = Signal(object)
+        error = Signal(str)
+
+    class ReceiverTableModel(QAbstractTableModel):
+        HEADERS = (
+            "Received",
+            "Sender",
+            "Protocol",
+            "Hostname",
+            "Facility",
+            "Severity",
+            "Application",
+            "Message",
+        )
+
+        def __init__(self, maximum: int = 10_000):
+            super().__init__()
+            self.messages: list[ReceivedMessage] = []
+            self.maximum = maximum
+
+        def rowCount(self, parent: QModelIndex | None = None) -> int:
+            return 0 if parent is not None and parent.isValid() else len(self.messages)
+
+        def columnCount(self, parent: QModelIndex | None = None) -> int:
+            return 0 if parent is not None and parent.isValid() else len(self.HEADERS)
+
+        def headerData(self, section: int, orientation: Qt.Orientation, role: int):
+            if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Horizontal:
+                return self.HEADERS[section]
+            return None
+
+        def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
+            if not index.isValid() or not 0 <= index.row() < len(self.messages):
+                return None
+            message = self.messages[index.row()]
+            values = (
+                message.received_at.astimezone().strftime("%H:%M:%S.%f")[:-3],
+                f"{message.sender}:{message.sender_port}",
+                message.protocol,
+                message.hostname or "—",
+                message.facility_name,
+                message.severity_name,
+                message.app or "—",
+                message.message,
+            )
+            if role == Qt.ItemDataRole.DisplayRole:
+                return values[index.column()]
+            if role == Qt.ItemDataRole.ToolTipRole:
+                return message.raw
+            if role == Qt.ItemDataRole.UserRole:
+                return message
+            if role == Qt.ItemDataRole.ForegroundRole and index.column() == 5:
+                colours = {
+                    "emerg": "#ff6379",
+                    "alert": "#ff7184",
+                    "crit": "#ff8797",
+                    "err": "#ff9cac",
+                    "warn": "#ffd28c",
+                    "notice": "#68d5ff",
+                    "info": "#66f2ca",
+                    "debug": "#91aeb9",
+                }
+                return QBrush(QColor(colours.get(message.severity_name, "#91aeb9")))
+            return None
+
+        def add_message(self, message: ReceivedMessage) -> None:
+            while len(self.messages) >= self.maximum:
+                self.beginRemoveRows(QModelIndex(), 0, 0)
+                self.messages.pop(0)
+                self.endRemoveRows()
+            row = len(self.messages)
+            self.beginInsertRows(QModelIndex(), row, row)
+            self.messages.append(message)
+            self.endInsertRows()
+
+        def set_maximum(self, maximum: int) -> None:
+            self.maximum = maximum
+            excess = len(self.messages) - maximum
+            if excess > 0:
+                self.beginRemoveRows(QModelIndex(), 0, excess - 1)
+                del self.messages[:excess]
+                self.endRemoveRows()
+
+        def clear(self) -> None:
+            if not self.messages:
+                return
+            self.beginResetModel()
+            self.messages.clear()
+            self.endResetModel()
+
+    class ReceiverFilterProxy(QSortFilterProxyModel):
+        def __init__(self):
+            super().__init__()
+            self.search_text = ""
+            self.severity = "All severities"
+            self.facility = "All facilities"
+            self.protocol = "All protocols"
+            self.setDynamicSortFilter(True)
+
+        def set_filters(self, search: str, severity: str, facility: str, protocol: str) -> None:
+            self.search_text = search.casefold().strip()
+            self.severity = severity
+            self.facility = facility
+            self.protocol = protocol
+            self.invalidateFilter()
+
+        def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
+            model = self.sourceModel()
+            index = model.index(source_row, 0, source_parent)
+            message = model.data(index, Qt.ItemDataRole.UserRole)
+            if not isinstance(message, ReceivedMessage):
+                return False
+            if self.severity != "All severities" and message.severity_name != self.severity:
+                return False
+            if self.facility != "All facilities" and message.facility_name != self.facility:
+                return False
+            if self.protocol != "All protocols" and message.protocol != self.protocol:
+                return False
+            if self.search_text:
+                haystack = (
+                    f"{message.raw} {message.sender} {message.hostname} {message.app} "
+                    f"{message.facility_name} {message.severity_name}"
+                ).casefold()
+                if self.search_text not in haystack:
+                    return False
+            return True
+
     class Window(QMainWindow):
         def __init__(self):
             super().__init__()
@@ -257,6 +429,13 @@ def main() -> int:
             self.setMinimumSize(900, 720)
             self.thread: QThread | None = None
             self.worker: Worker | None = None
+            self.receiver: SyslogReceiver | None = None
+            self.receiver_bridge = ReceiverBridge()
+            self.receiver_bridge.message.connect(self.receive_message)
+            self.receiver_bridge.error.connect(self.receiver_error)
+            self.receiver_total = 0
+            self.receiver_pending: list[ReceivedMessage] = []
+            self.receiver_paused = False
             self._build()
             self.preview()
 
@@ -324,7 +503,7 @@ def main() -> int:
             tagline = QLabel("SYSLOG TRAFFIC STUDIO")
             tagline.setObjectName("tagline")
             description = QLabel(
-                "Build, preview and transmit standards-aware test traffic with confidence."
+                "Send, receive and inspect standards-aware syslog traffic with confidence."
             )
             description.setObjectName("brandDescription")
             brand_copy.addWidget(product_name)
@@ -338,10 +517,20 @@ def main() -> int:
             header_layout.addWidget(version, alignment=Qt.AlignmentFlag.AlignTop)
             layout.addWidget(header)
 
+            workspace = QTabWidget()
+            workspace.setObjectName("workspaceTabs")
+            workspace.setDocumentMode(True)
+
+            sender_page = QWidget()
+            sender_page.setObjectName("workspacePage")
+            sender_layout = QVBoxLayout(sender_page)
+            sender_layout.setContentsMargins(0, 8, 0, 0)
+            sender_layout.setSpacing(12)
+
             tabs = QTabWidget()
             tabs.setDocumentMode(True)
             tabs.setMinimumHeight(420)
-            layout.addWidget(tabs, 3)
+            sender_layout.addWidget(tabs, 3)
 
             connection = QWidget()
             connection.setObjectName("tabPage")
@@ -477,7 +666,7 @@ def main() -> int:
             self.preview_box.setReadOnly(True)
             self.preview_box.setMaximumHeight(100)
             preview_layout.addWidget(self.preview_box)
-            layout.addWidget(preview_group)
+            sender_layout.addWidget(preview_group)
             controls = QHBoxLayout()
             self.start_button = QPushButton("Start")
             self.start_button.setObjectName("primaryButton")
@@ -495,17 +684,21 @@ def main() -> int:
             controls.addStretch()
             controls.addWidget(save_button)
             controls.addWidget(load_button)
-            layout.addLayout(controls)
+            sender_layout.addLayout(controls)
             self.status = QLabel("Ready")
             self.status.setObjectName("statusPill")
             self.status.setProperty("state", "ready")
             self.status.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            layout.addWidget(self.status)
+            sender_layout.addWidget(self.status)
             self.log = QPlainTextEdit()
             self.log.setReadOnly(True)
             self.log.setMinimumHeight(120)
             self.log.setPlaceholderText("Transmission events and errors will appear here.")
-            layout.addWidget(self.log)
+            sender_layout.addWidget(self.log)
+
+            workspace.addTab(sender_page, "Send")
+            workspace.addTab(self._build_receiver_page(), "Receive")
+            layout.addWidget(workspace, 1)
 
             footer = QHBoxLayout()
             copyright_label = QLabel(__copyright__)
@@ -522,6 +715,371 @@ def main() -> int:
             for widget in [self.format, self.facility, self.severity]:
                 widget.currentTextChanged.connect(self.preview)
             self.wire_size.valueChanged.connect(self.preview)
+
+        def _build_receiver_page(self) -> QWidget:
+            page = QWidget()
+            page.setObjectName("workspacePage")
+            page_layout = QVBoxLayout(page)
+            page_layout.setContentsMargins(0, 8, 0, 0)
+            page_layout.setSpacing(12)
+
+            listener_group = QGroupBox("Listener")
+            listener_grid = QGridLayout(listener_group)
+            listener_grid.setContentsMargins(18, 18, 18, 14)
+            listener_grid.setHorizontalSpacing(12)
+            listener_grid.setVerticalSpacing(10)
+            self.receiver_bind = QLineEdit("0.0.0.0")
+            self.receiver_bind.setPlaceholderText("0.0.0.0, ::, or a local address")
+            self.receiver_port = QSpinBox()
+            self.receiver_port.setRange(1, 65535)
+            self.receiver_port.setValue(5514)
+            self.receiver_protocol = QComboBox()
+            self.receiver_protocol.addItems(["UDP", "TCP"])
+            self.receiver_framing = QComboBox()
+            self.receiver_framing.addItems(["auto", "octet", "lf"])
+            self.receiver_framing.setEnabled(False)
+            self.receiver_protocol.currentTextChanged.connect(
+                lambda protocol: self.receiver_framing.setEnabled(protocol == "TCP")
+            )
+            self.receiver_retention = QSpinBox()
+            self.receiver_retention.setRange(100, 1_000_000)
+            self.receiver_retention.setValue(10_000)
+            self.receiver_retention.setSingleStep(1_000)
+            self.receiver_retention.setSuffix(" messages")
+            for widget in (
+                self.receiver_bind,
+                self.receiver_port,
+                self.receiver_protocol,
+                self.receiver_framing,
+                self.receiver_retention,
+            ):
+                widget.setMinimumHeight(38)
+                widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+            self.receiver_bind.setMinimumWidth(240)
+            listener_grid.addWidget(QLabel("Bind address"), 0, 0)
+            listener_grid.addWidget(self.receiver_bind, 1, 0)
+            listener_grid.addWidget(QLabel("Port"), 0, 1)
+            listener_grid.addWidget(self.receiver_port, 1, 1)
+            listener_grid.addWidget(QLabel("Protocol"), 0, 2)
+            listener_grid.addWidget(self.receiver_protocol, 1, 2)
+            listener_grid.addWidget(QLabel("TCP framing"), 0, 3)
+            listener_grid.addWidget(self.receiver_framing, 1, 3)
+            listener_grid.addWidget(QLabel("Retention"), 0, 4)
+            listener_grid.addWidget(self.receiver_retention, 1, 4)
+            listener_grid.setColumnStretch(0, 3)
+            for column in range(1, 5):
+                listener_grid.setColumnStretch(column, 1)
+
+            listener_actions = QHBoxLayout()
+            self.receiver_start = QPushButton("Start listening")
+            self.receiver_start.setObjectName("primaryButton")
+            self.receiver_start.clicked.connect(self.start_receiver)
+            self.receiver_stop = QPushButton("Stop")
+            self.receiver_stop.setObjectName("dangerButton")
+            self.receiver_stop.setEnabled(False)
+            self.receiver_stop.clicked.connect(self.stop_receiver)
+            self.receiver_status = QLabel("Stopped")
+            self.receiver_status.setObjectName("statusPill")
+            self.receiver_status.setProperty("state", "ready")
+            listener_actions.addWidget(self.receiver_start)
+            listener_actions.addWidget(self.receiver_stop)
+            listener_actions.addWidget(self.receiver_status, 1)
+            listener_grid.addLayout(listener_actions, 2, 0, 1, 5)
+            privilege_help = QLabel(
+                "Ports 1–65535 are supported. Ports below 1024 may require elevated privileges "
+                "or an operating-system bind capability."
+            )
+            privilege_help.setObjectName("listenerHelp")
+            privilege_help.setWordWrap(True)
+            listener_grid.addWidget(privilege_help, 3, 0, 1, 5)
+            page_layout.addWidget(listener_group)
+
+            filter_group = QGroupBox("Find and filter")
+            filter_layout = QHBoxLayout(filter_group)
+            self.receiver_search = QLineEdit()
+            self.receiver_search.setPlaceholderText(
+                "Search message text, sender, hostname, application, facility…"
+            )
+            self.receiver_search.setMinimumHeight(38)
+            self.receiver_severity = QComboBox()
+            self.receiver_severity.addItems(["All severities", *SEVERITY_NAMES])
+            self.receiver_facility = QComboBox()
+            self.receiver_facility.addItems(["All facilities", *FACILITY_NAMES])
+            self.receiver_protocol_filter = QComboBox()
+            self.receiver_protocol_filter.addItems(["All protocols", "UDP", "TCP"])
+            for widget in (
+                self.receiver_severity,
+                self.receiver_facility,
+                self.receiver_protocol_filter,
+            ):
+                widget.setMinimumHeight(38)
+            filter_layout.addWidget(self.receiver_search, 3)
+            filter_layout.addWidget(self.receiver_severity)
+            filter_layout.addWidget(self.receiver_facility)
+            filter_layout.addWidget(self.receiver_protocol_filter)
+            page_layout.addWidget(filter_group)
+
+            self.receiver_model = ReceiverTableModel(self.receiver_retention.value())
+            self.receiver_proxy = ReceiverFilterProxy()
+            self.receiver_proxy.setSourceModel(self.receiver_model)
+            self.receiver_table = QTableView()
+            self.receiver_table.setModel(self.receiver_proxy)
+            self.receiver_table.setAlternatingRowColors(True)
+            self.receiver_table.setSortingEnabled(True)
+            self.receiver_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+            self.receiver_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+            self.receiver_table.verticalHeader().setVisible(False)
+            self.receiver_table.setWordWrap(False)
+            header = self.receiver_table.horizontalHeader()
+            header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+            header.setSectionResizeMode(7, QHeaderView.ResizeMode.Stretch)
+            self.receiver_table.selectionModel().selectionChanged.connect(self.show_receiver_detail)
+
+            self.receiver_detail = QPlainTextEdit()
+            self.receiver_detail.setReadOnly(True)
+            self.receiver_detail.setPlaceholderText(
+                "Select a received message to inspect parsed fields and the original payload."
+            )
+            self.receiver_detail.setMinimumHeight(130)
+            splitter = QSplitter(Qt.Orientation.Vertical)
+            splitter.addWidget(self.receiver_table)
+            splitter.addWidget(self.receiver_detail)
+            splitter.setStretchFactor(0, 4)
+            splitter.setStretchFactor(1, 1)
+            splitter.setSizes([480, 150])
+            page_layout.addWidget(splitter, 1)
+
+            footer = QHBoxLayout()
+            self.receiver_summary = QLabel("Received 0 · Showing 0 · Malformed 0")
+            self.receiver_summary.setObjectName("receiverSummary")
+            self.receiver_pause = QPushButton("Pause display")
+            self.receiver_pause.setCheckable(True)
+            self.receiver_pause.toggled.connect(self.toggle_receiver_pause)
+            clear = QPushButton("Clear")
+            clear.clicked.connect(self.clear_receiver_messages)
+            export = QPushButton("Export filtered…")
+            export.clicked.connect(self.export_receiver_messages)
+            footer.addWidget(self.receiver_summary)
+            footer.addStretch()
+            footer.addWidget(self.receiver_pause)
+            footer.addWidget(clear)
+            footer.addWidget(export)
+            page_layout.addLayout(footer)
+
+            for widget in (
+                self.receiver_search,
+                self.receiver_severity,
+                self.receiver_facility,
+                self.receiver_protocol_filter,
+            ):
+                if isinstance(widget, QLineEdit):
+                    widget.textChanged.connect(self.apply_receiver_filters)
+                else:
+                    widget.currentTextChanged.connect(self.apply_receiver_filters)
+            self.receiver_retention.valueChanged.connect(self.receiver_model.set_maximum)
+            return page
+
+        def set_receiver_status(self, text: str, state: str) -> None:
+            self.receiver_status.setText(text)
+            self.receiver_status.setProperty("state", state)
+            self.receiver_status.style().unpolish(self.receiver_status)
+            self.receiver_status.style().polish(self.receiver_status)
+
+        @Slot()
+        def start_receiver(self) -> None:
+            config = ReceiverConfig(
+                self.receiver_bind.text().strip() or "0.0.0.0",
+                self.receiver_port.value(),
+                self.receiver_protocol.currentText().lower(),
+                self.receiver_framing.currentText(),
+            )
+            receiver = SyslogReceiver(
+                config,
+                self.receiver_bridge.message.emit,
+                lambda error: self.receiver_bridge.error.emit(str(error)),
+            )
+            try:
+                receiver.start()
+            except PermissionError as error:
+                QMessageBox.critical(
+                    self,
+                    "Elevation required",
+                    f"LogSalvo was not permitted to listen on port {config.port}.\n\n"
+                    "Choose a port above 1023, relaunch LogSalvo with administrator/root "
+                    "privileges, or grant the Python executable permission to bind privileged ports.\n\n"
+                    f"Operating-system response: {error}",
+                )
+                self.set_receiver_status("Permission denied", "error")
+                return
+            except OSError as error:
+                QMessageBox.critical(
+                    self,
+                    "Could not start listener",
+                    f"Could not listen on {config.bind_address}:{config.port}/{config.protocol.upper()}.\n\n"
+                    f"{error}",
+                )
+                self.set_receiver_status("Listener failed", "error")
+                return
+            self.receiver = receiver
+            self.receiver_start.setEnabled(False)
+            self.receiver_stop.setEnabled(True)
+            for widget in (
+                self.receiver_bind,
+                self.receiver_port,
+                self.receiver_protocol,
+                self.receiver_framing,
+            ):
+                widget.setEnabled(False)
+            self.set_receiver_status(
+                f"Listening on {config.bind_address}:{config.port}/{config.protocol.upper()}",
+                "running",
+            )
+
+        @Slot()
+        def stop_receiver(self) -> None:
+            if self.receiver:
+                self.receiver.stop()
+                self.receiver = None
+            self.receiver_start.setEnabled(True)
+            self.receiver_stop.setEnabled(False)
+            for widget in (self.receiver_bind, self.receiver_port, self.receiver_protocol):
+                widget.setEnabled(True)
+            self.receiver_framing.setEnabled(self.receiver_protocol.currentText() == "TCP")
+            self.set_receiver_status("Stopped", "ready")
+
+        @Slot(object)
+        def receive_message(self, message: object) -> None:
+            if not isinstance(message, ReceivedMessage):
+                return
+            self.receiver_total += 1
+            if self.receiver_paused:
+                self.receiver_pending.append(message)
+                maximum = self.receiver_retention.value()
+                if len(self.receiver_pending) > maximum:
+                    del self.receiver_pending[: len(self.receiver_pending) - maximum]
+            else:
+                self.receiver_model.add_message(message)
+                self.receiver_table.scrollToBottom()
+            self.update_receiver_summary()
+
+        @Slot(str)
+        def receiver_error(self, error: str) -> None:
+            self.set_receiver_status(f"Listener error: {error}", "error")
+            if self.receiver:
+                self.receiver.stop()
+                self.receiver = None
+            self.receiver_start.setEnabled(True)
+            self.receiver_stop.setEnabled(False)
+
+        @Slot(bool)
+        def toggle_receiver_pause(self, paused: bool) -> None:
+            self.receiver_paused = paused
+            self.receiver_pause.setText("Resume display" if paused else "Pause display")
+            if not paused and self.receiver_pending:
+                pending, self.receiver_pending = self.receiver_pending, []
+                for message in pending:
+                    self.receiver_model.add_message(message)
+                self.receiver_table.scrollToBottom()
+            self.update_receiver_summary()
+
+        @Slot()
+        def apply_receiver_filters(self) -> None:
+            self.receiver_proxy.set_filters(
+                self.receiver_search.text(),
+                self.receiver_severity.currentText(),
+                self.receiver_facility.currentText(),
+                self.receiver_protocol_filter.currentText(),
+            )
+            self.update_receiver_summary()
+
+        def update_receiver_summary(self) -> None:
+            malformed = sum(bool(message.parse_error) for message in self.receiver_model.messages)
+            paused = f" · Queued {len(self.receiver_pending)}" if self.receiver_paused else ""
+            self.receiver_summary.setText(
+                f"Received {self.receiver_total:,} · Showing {self.receiver_proxy.rowCount():,} "
+                f"· Malformed {malformed:,}{paused}"
+            )
+
+        @Slot()
+        def show_receiver_detail(self) -> None:
+            indexes = self.receiver_table.selectionModel().selectedRows()
+            if not indexes:
+                self.receiver_detail.clear()
+                return
+            source = self.receiver_proxy.mapToSource(indexes[0])
+            message = self.receiver_model.messages[source.row()]
+            fields = (
+                f"Received:  {message.received_at.astimezone().isoformat(timespec='milliseconds')}",
+                f"Sender:    {message.sender}:{message.sender_port} via {message.protocol}",
+                f"Format:    {message.format}",
+                f"Priority:  {message.priority if message.priority is not None else 'unknown'}",
+                f"Facility:  {message.facility_name} ({message.facility})",
+                f"Severity:  {message.severity_name} ({message.severity})",
+                f"Hostname:  {message.hostname or '—'}",
+                f"App:       {message.app or '—'}",
+                f"PROCID:    {message.procid or '—'}",
+                f"MSGID:     {message.msgid or '—'}",
+                f"Timestamp: {message.timestamp or '—'}",
+                f"Error:     {message.parse_error or '—'}",
+                "",
+                "Raw message",
+                "───────────",
+                message.raw,
+            )
+            self.receiver_detail.setPlainText("\n".join(fields))
+
+        @Slot()
+        def clear_receiver_messages(self) -> None:
+            if self.receiver_model.messages or self.receiver_pending:
+                answer = QMessageBox.question(
+                    self, "Clear received messages", "Remove all captured messages from this view?"
+                )
+                if answer != QMessageBox.StandardButton.Yes:
+                    return
+            self.receiver_model.clear()
+            self.receiver_pending.clear()
+            self.receiver_total = 0
+            self.receiver_detail.clear()
+            self.update_receiver_summary()
+
+        def filtered_receiver_messages(self) -> list[ReceivedMessage]:
+            messages = []
+            for row in range(self.receiver_proxy.rowCount()):
+                source = self.receiver_proxy.mapToSource(self.receiver_proxy.index(row, 0))
+                messages.append(self.receiver_model.messages[source.row()])
+            return messages
+
+        @Slot()
+        def export_receiver_messages(self) -> None:
+            messages = self.filtered_receiver_messages()
+            if not messages:
+                QMessageBox.information(
+                    self, "Nothing to export", "No visible messages match the filters."
+                )
+                return
+            filename, selected = QFileDialog.getSaveFileName(
+                self,
+                "Export filtered messages",
+                "logsalvo-received.csv",
+                "CSV (*.csv);;JSON Lines (*.jsonl);;Raw syslog (*.log)",
+            )
+            if not filename:
+                return
+            format_name = "jsonl" if "JSON" in selected else "raw" if "Raw" in selected else "csv"
+            suffix = {"csv": ".csv", "jsonl": ".jsonl", "raw": ".log"}[format_name]
+            destination = Path(filename)
+            if not destination.suffix:
+                destination = destination.with_suffix(suffix)
+            try:
+                export_messages(messages, destination, format_name)
+            except OSError as error:
+                QMessageBox.critical(self, "Export failed", str(error))
+                return
+            QMessageBox.information(
+                self,
+                "Export complete",
+                f"Exported {len(messages):,} filtered messages to:\n{destination}",
+            )
 
         def set_status(self, text: str, state: str) -> None:
             self.status.setText(text)
@@ -543,8 +1101,8 @@ def main() -> int:
             )
             dialog.setText(f"<h2>{__app_name__}</h2><p><b>Version {__version__}</b></p>")
             dialog.setInformativeText(
-                "A professional RFC 3164/5424 traffic generator for testing collectors, "
-                "SIEM platforms and log pipelines.<br><br>"
+                "A professional RFC 3164/5424 traffic studio for sending, receiving and "
+                "inspecting messages across collectors, SIEM platforms and log pipelines.<br><br>"
                 f"{__copyright__}<br>Released under the MIT License."
             )
             dialog.exec()
@@ -767,6 +1325,9 @@ def main() -> int:
                 QMessageBox.critical(self, "Could not load profile", str(error))
 
         def closeEvent(self, event: object) -> None:
+            if self.receiver:
+                self.receiver.stop()
+                self.receiver = None
             if self.worker:
                 self.worker.cancel()
                 assert self.thread is not None

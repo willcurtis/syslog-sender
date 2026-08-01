@@ -20,6 +20,7 @@ LogSalvo uses The Tech Shed visual identity: deep navy, cyan and teal. The suppl
 - Full encoded-payload padding for MTU and parser tests
 - Dry-run mode, message preview, progress statistics, and meaningful exit codes
 - Desktop GUI with profiles, live preview, message import, cancellation, and event log
+- Built-in UDP/TCP receiver with live parsing, filtering, inspection, and export
 - No third-party runtime dependencies for CLI use
 
 > [!CAUTION]
@@ -93,6 +94,48 @@ The GUI separates configuration into Connection, Message, and Run tabs.
 Live statistics show attempted, successful, and failed messages plus effective rate. Profiles can be saved to JSON and loaded later. Certificate and key paths are saved, but certificate or private-key contents are never copied into a profile.
 
 The GUI warns before rates above 10,000 messages per second. Actual throughput depends on the operating system, transport, TLS, destination, and whether the live event log is displaying every message.
+
+## Receiving syslog
+
+Select the **Receive** workspace to run LogSalvo as a local syslog listener. The listener configuration is explicit because the operating system must know which local socket to open:
+
+| Setting | Description |
+| --- | --- |
+| Bind address | `0.0.0.0` for all IPv4 interfaces, `::` for IPv6, `127.0.0.1` for local-only traffic, or a specific local address |
+| Port | Any user-selected port from 1 through 65535; default 5514 |
+| Protocol | UDP or TCP |
+| TCP framing | Automatic detection, RFC 6587 octet-counting, or newline-delimited messages |
+| Retention | Maximum number of messages kept in memory; default 10,000 |
+
+Press **Start listening** after choosing the settings. LogSalvo reports permission errors, address conflicts, and invalid local addresses directly in the listener status and an explanatory dialog.
+
+### Privileged ports and elevation
+
+LogSalvo allows ports below 1024, including the standard syslog port 514. Some operating systems require administrator/root permission or a bind capability for these ports. LogSalvo never silently substitutes a different port. If the bind is refused, either:
+
+- relaunch it with the elevation method appropriate to your operating system;
+- grant the Python executable permission to bind privileged ports; or
+- select an unprivileged port such as 5514 and configure senders accordingly.
+
+Running an entire desktop application as root carries risk. Prefer a narrowly scoped operating-system bind capability or port redirection where your platform supports one.
+
+### Live message view
+
+Incoming RFC 3164 and RFC 5424 messages are parsed into received time, sender, transport, hostname, facility, severity, application, and message columns. Severity values are colour-coded. Messages that cannot be parsed remain available as raw records and are included in the malformed counter.
+
+Select a row to inspect every parsed field and the original payload. The **Pause display** control keeps receiving into a bounded queue while holding the visible table steady; resume to add queued messages. **Clear** removes captured data from memory without stopping the listener.
+
+### Filtering and export
+
+The receiver can search message text, sender address, hostname, application, facility, and severity. Dedicated filters narrow the view by severity, facility, and UDP/TCP protocol.
+
+**Export filtered…** exports exactly the currently visible result set in its displayed sort order:
+
+- CSV for spreadsheets and reporting;
+- JSON Lines for automation and data tools; or
+- raw syslog text for replay and troubleshooting.
+
+Retention is bounded to prevent long-running listeners from using unlimited memory. The received counter tracks the session total while the table contains only the retained messages.
 
 ## CLI reference
 
@@ -362,4 +405,4 @@ The legacy `syslog_sender.py` and standalone `syslog-pro.py` have been removed. 
 
 LogSalvo is released under the [MIT License](LICENSE).
 
-Copyright © 2025–2026 The Tech Shed. LogSalvo version 2.1.1.
+Copyright © 2025–2026 The Tech Shed. LogSalvo version 2.2.0.

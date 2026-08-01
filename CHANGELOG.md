@@ -2,6 +2,24 @@
 
 All notable changes to LogSalvo are documented here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [2.2.0] - 2026-08-01
+
+### Added
+
+- User-configurable UDP and TCP syslog receiver for any port from 1 through 65535.
+- Clear elevation guidance when the operating system denies a privileged port such as 514.
+- IPv4/IPv6 bind-address selection and automatic, octet-counted, or newline TCP framing.
+- Automatic RFC 3164/RFC 5424 parsing with raw-message fallback.
+- Live severity-coloured message table, parsed/raw detail view, session counters, and bounded retention.
+- Free-text, severity, facility, and protocol filtering.
+- Pause/resume display queue, clear confirmation, and filtered CSV/JSONL/raw export.
+- UDP/TCP integration tests and parser/export coverage.
+
+### Changed
+
+- Reorganized the desktop interface into dedicated Send and Receive workspaces.
+- Updated product descriptions to reflect bidirectional syslog tooling.
+
 ## [2.1.1] - 2026-08-01
 
 ### Fixed
@@ -73,7 +91,8 @@ All notable changes to LogSalvo are documented here. The project follows [Semant
 
 - Initial UDP-based random syslog sender.
 
-[2.1.1]: https://github.com/willcurtis/syslog-sender/compare/4e255fd...v2.1.1
+[2.2.0]: https://github.com/willcurtis/syslog-sender/compare/a82f419...v2.2.0
+[2.1.1]: https://github.com/willcurtis/syslog-sender/compare/4e255fd...a82f419
 [2.1.0]: https://github.com/willcurtis/syslog-sender/compare/e10ab32...4e255fd
 [2.0.0]: https://github.com/willcurtis/syslog-sender/compare/6d298f3c...e10ab32
 [1.1.0]: https://github.com/willcurtis/syslog-sender/commits/6d298f3c
