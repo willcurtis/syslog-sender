@@ -2,6 +2,18 @@
 
 All notable changes to LogSalvo are documented here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [2.4.1] - 2026-08-01
+
+### Fixed
+
+- Removed the native dark fill that appeared across unused tab-bar space in Light mode.
+- Primary and secondary tab bars now blend cleanly into their surrounding surfaces in both themes.
+
+### Changed
+
+- Send/Receive uses a compact rounded workspace switch, while Connection/Message/Run uses a quieter underline-style secondary navigation.
+- Improved tab spacing, hover feedback, borders, contrast, and selected states.
+
 ## [2.4.0] - 2026-08-01
 
 ### Added
@@ -136,6 +148,7 @@ All notable changes to LogSalvo are documented here. The project follows [Semant
 
 - Initial UDP-based random syslog sender.
 
+[2.4.1]: https://github.com/willcurtis/logsalvo/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/willcurtis/logsalvo/compare/v2.3.1...v2.4.0
 [2.3.1]: https://github.com/willcurtis/logsalvo/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/willcurtis/logsalvo/compare/v2.2.1...v2.3.0

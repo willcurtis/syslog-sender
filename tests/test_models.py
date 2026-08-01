@@ -33,6 +33,10 @@ def test_gui_provides_distinct_light_and_dark_themes() -> None:
     assert "background: #081820" in THEME_STYLESHEETS["dark"]
     assert "background: #eef6f8" in THEME_STYLESHEETS["light"]
     assert "QPushButton#themeSwitch" in THEME_STYLESHEETS["light"]
+    for stylesheet in THEME_STYLESHEETS.values():
+        assert "QTabBar#workspaceTabBar" in stylesheet
+        assert "QTabBar#senderTabBar" in stylesheet
+    assert "QTabBar::tab" not in THEME_STYLESHEETS["dark"]
 
 
 @pytest.mark.parametrize(
