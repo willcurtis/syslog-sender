@@ -94,7 +94,7 @@ class MessageConfig:
     facility: int = 16
     severity: int = 6
     hostname: str = "localhost"
-    app: str = "syslog-sender"
+    app: str = "logsalvo"
     procid: str = "-"
     msgid: str = "TEST"
     structured_data: str = "-"

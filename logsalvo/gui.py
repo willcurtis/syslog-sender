@@ -35,7 +35,7 @@ def main() -> int:
         )
     except ImportError:
         print(
-            "The GUI requires PySide6. Install it with: pip install 'syslog-sender[gui]'",
+            "The GUI requires PySide6. Install it with: pip install 'logsalvo[gui]'",
             file=sys.stderr,
         )
         return 2
@@ -73,7 +73,7 @@ def main() -> int:
     class Window(QMainWindow):
         def __init__(self):
             super().__init__()
-            self.setWindowTitle("Syslog Sender 2.0")
+            self.setWindowTitle("LogSalvo 2.0")
             self.resize(980, 760)
             self.thread: QThread | None = None
             self.worker: Worker | None = None
@@ -135,7 +135,7 @@ def main() -> int:
             self.severity.addItems(SEVERITIES)
             self.severity.setCurrentText("info")
             self.hostname = self._line(socket.gethostname())
-            self.app = self._line("syslog-sender")
+            self.app = self._line("logsalvo")
             self.procid = self._line("-")
             self.msgid = self._line("TEST")
             self.sd = self._line("-")

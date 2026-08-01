@@ -33,7 +33,7 @@ def named(value: str, choices: dict[str, int], label: str) -> int:
 
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(
-        prog="syslog-sender", description="Generate RFC 3164/5424 syslog test traffic."
+        prog="logsalvo", description="LogSalvo RFC 3164/5424 syslog traffic generator."
     )
     result.add_argument("target", help="collector IP address or hostname")
     result.add_argument("-p", "--port", type=positive_port, default=None)
@@ -52,7 +52,7 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--facility", type=lambda v: named(v, FACILITIES, "facility"), default=16)
     result.add_argument("--severity", type=lambda v: named(v, SEVERITIES, "severity"), default=6)
     result.add_argument("--hostname", default=socket.gethostname())
-    result.add_argument("--app", default="syslog-sender")
+    result.add_argument("--app", default="logsalvo")
     result.add_argument("--procid", default=str(os.getpid()))
     result.add_argument("--msgid", default="TEST")
     result.add_argument("--sd", default="-")

@@ -6,7 +6,7 @@ import time
 
 import pytest
 
-from syslog_sender import MessageConfig, RunConfig, Sender, SenderConfig
+from logsalvo import MessageConfig, RunConfig, Sender, SenderConfig
 
 
 class UdpCollector:
@@ -64,7 +64,7 @@ def test_rate_limiter_does_not_double_requested_rate() -> None:
 
 
 def test_failed_attempts_terminate_at_count(monkeypatch: pytest.MonkeyPatch) -> None:
-    from syslog_sender import sender as sender_module
+    from logsalvo import sender as sender_module
 
     class BrokenTransport:
         def __init__(self, _: object):

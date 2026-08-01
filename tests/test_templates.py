@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from syslog_sender.templates import apply_template
+from logsalvo.templates import apply_template
 
 
 def test_expands_supported_tokens() -> None:

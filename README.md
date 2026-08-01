@@ -1,6 +1,6 @@
-# Syslog Sender
+# LogSalvo
 
-Syslog Sender is a cross-platform Python application for generating controlled syslog traffic when testing collectors, SIEM platforms, firewall rules, parsers, alerts, and log pipelines. Version 2 provides both a command-line interface and a PySide6 desktop GUI over the same tested sender core.
+LogSalvo is a cross-platform Python application for generating controlled syslog traffic when testing collectors, SIEM platforms, firewall rules, parsers, alerts, and log pipelines. Version 2 provides both a command-line interface and a PySide6 desktop GUI over the same tested sender core.
 
 ## Highlights
 
@@ -57,13 +57,13 @@ python -m pip install -e '.[dev,gui]'
 Send ten RFC 3164 messages over UDP:
 
 ```bash
-syslog-sender 192.0.2.10 --count 10 --message 'Test message {seq} {uuid}'
+logsalvo 192.0.2.10 --count 10 --message 'Test message {seq} {uuid}'
 ```
 
 Preview without transmitting:
 
 ```bash
-syslog-sender 192.0.2.10 --dry-run --echo --count 3 \
+logsalvo 192.0.2.10 --dry-run --echo --count 3 \
   --format 5424 --facility local4 --severity notice \
   --message 'Configuration test {seq} at {timestamp}'
 ```
@@ -71,7 +71,7 @@ syslog-sender 192.0.2.10 --dry-run --echo --count 3 \
 Start the desktop application:
 
 ```bash
-syslog-sender-gui
+logsalvo-gui
 ```
 
 ## Desktop GUI
@@ -93,7 +93,7 @@ The GUI warns before rates above 10,000 messages per second. Actual throughput d
 ## CLI reference
 
 ```text
-usage: syslog-sender [-h] [-p PORT] [--transport {udp,tcp}] [--tls]
+usage: logsalvo [-h] [-p PORT] [--transport {udp,tcp}] [--tls]
                      [--cafile CAFILE] [--certfile CERTFILE] [--keyfile KEYFILE]
                      [--insecure] [--sni SNI] [--tcp-framing {octet,lf}]
                      [--bind-ip BIND_IP] [--timeout TIMEOUT] [--retries RETRIES]
@@ -164,7 +164,7 @@ Sources are mutually exclusive:
 An empty input is rejected instead of entering an unproductive loop. The included `msgs.txt` contains 1,500 JSON-style sample events and can be used directly:
 
 ```bash
-syslog-sender 192.0.2.10 --from-file msgs.txt --count 100 --rate 25
+logsalvo 192.0.2.10 --from-file msgs.txt --count 100 --rate 25
 ```
 
 ### Template variables
@@ -183,7 +183,7 @@ syslog-sender 192.0.2.10 --from-file msgs.txt --count 100 --rate 25
 Example:
 
 ```bash
-syslog-sender logs.example.net --format 5424 --count 50 --rate 10 \
+logsalvo logs.example.net --format 5424 --count 50 --rate 10 \
   --message 'probe={seq} correlation={uuid} cpu={randint:10:95}'
 ```
 
@@ -201,7 +201,7 @@ syslog-sender logs.example.net --format 5424 --count 50 --rate 10 \
 RFC 5424 over TCP using octet-counted framing:
 
 ```bash
-syslog-sender logs.example.net --transport tcp --port 10514 \
+logsalvo logs.example.net --transport tcp --port 10514 \
   --format 5424 --count 100 --rate 50 --msgid NETTEST \
   --sd '[example@32473 site="lon1"]'
 ```
@@ -209,14 +209,14 @@ syslog-sender logs.example.net --transport tcp --port 10514 \
 TLS with a private CA:
 
 ```bash
-syslog-sender logs.example.net --transport tcp --tls --cafile ./lab-ca.pem \
+logsalvo logs.example.net --transport tcp --tls --cafile ./lab-ca.pem \
   --format 5424 --count 20 --message 'TLS probe {seq}'
 ```
 
 Mutual TLS:
 
 ```bash
-syslog-sender logs.example.net --transport tcp --tls \
+logsalvo logs.example.net --transport tcp --tls \
   --cafile ./ca.pem --certfile ./client.pem --keyfile ./client-key.pem \
   --count 20
 ```
@@ -224,20 +224,20 @@ syslog-sender logs.example.net --transport tcp --tls \
 IPv6 with a selected source address:
 
 ```bash
-syslog-sender 2001:db8::50 --bind-ip 2001:db8::10 --count 5
+logsalvo 2001:db8::50 --bind-ip 2001:db8::10 --count 5
 ```
 
 Generate for 30 seconds regardless of count:
 
 ```bash
-syslog-sender 192.0.2.10 --count 0 --duration 30 --rate 100
+logsalvo 192.0.2.10 --count 0 --duration 30 --rate 100
 ```
 
 Pipe messages from another program:
 
 ```bash
 printf 'first {seq}\nsecond {seq}\n' | \
-  syslog-sender 192.0.2.10 --stdin --count 10 --delay 0.2
+  logsalvo 192.0.2.10 --stdin --count 10 --delay 0.2
 ```
 
 ## Exit codes
@@ -263,7 +263,7 @@ TCP with LF framing:
 
 ```bash
 nc -kl 10514
-syslog-sender 127.0.0.1 --transport tcp --tcp-framing lf --port 10514 --count 5
+logsalvo 127.0.0.1 --transport tcp --tcp-framing lf --port 10514 --count 5
 ```
 
 TLS test endpoint:
@@ -315,7 +315,7 @@ Tests include message formatting, field validation, template expansion, pacing, 
 The main components are:
 
 ```text
-syslog_sender/
+logsalvo/
 ├── cli.py          command-line adapter
 ├── gui.py          PySide6 desktop adapter
 ├── formatters.py   RFC 3164/5424 encoding
@@ -331,8 +331,8 @@ PyInstaller can create a standalone executable. Install it alongside the GUI ext
 
 ```bash
 python -m pip install '.[gui]' pyinstaller
-pyinstaller --windowed --name syslog-sender-gui \
-  --collect-all PySide6 "$(command -v syslog-sender-gui)"
+pyinstaller --windowed --name logsalvo-gui \
+  --collect-all PySide6 "$(command -v logsalvo-gui)"
 ```
 
 PyInstaller options and signing/notarization requirements differ by operating system. Build and test on each target platform rather than cross-compiling.
@@ -341,12 +341,13 @@ PyInstaller options and signing/notarization requirements differ by operating sy
 
 The legacy `syslog_sender.py` and standalone `syslog-pro.py` have been removed. After installation:
 
-- Replace `python syslog-pro.py HOST ...` with `syslog-sender HOST ...`.
+- Replace `python syslog-pro.py HOST ...` with `logsalvo HOST ...`.
+- Replace the pre-release `syslog-sender HOST ...` command with `logsalvo HOST ...`.
 - Replace `--size` with the unambiguous `--wire-size`.
 - Counts now measure attempts and always terminate despite send errors.
 - Invalid negative values now fail rather than acting as undocumented infinite modes.
-- Use `syslog-sender-gui` for the desktop interface.
+- Use `logsalvo-gui` for the desktop interface.
 
 ## License
 
-Syslog Sender is released under the [MIT License](LICENSE).
+LogSalvo is released under the [MIT License](LICENSE).

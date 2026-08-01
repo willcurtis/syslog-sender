@@ -1,12 +1,13 @@
 # Changelog
 
-All notable changes to Syslog Sender are documented here. The project follows [Semantic Versioning](https://semver.org/).
+All notable changes to LogSalvo are documented here. The project follows [Semantic Versioning](https://semver.org/).
 
 ## [2.0.0] - 2026-08-01
 
 ### Added
 
-- Installable `syslog_sender` package with shared CLI and GUI core.
+- LogSalvo application name and `logsalvo` / `logsalvo-gui` entry points.
+- Installable `logsalvo` package with shared CLI and GUI core.
 - PySide6 desktop GUI with connection, TLS, message, and run configuration.
 - Live encoded-message preview, event log, progress counters, cancellation, file import, and JSON profiles.
 - Validated configuration dataclasses and clear CLI validation errors.

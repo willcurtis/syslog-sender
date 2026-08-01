@@ -2,8 +2,8 @@ from datetime import datetime, timezone
 
 import pytest
 
-from syslog_sender.formatters import build_message, validate_structured_data
-from syslog_sender.models import MessageConfig
+from logsalvo.formatters import build_message, validate_structured_data
+from logsalvo.models import MessageConfig
 
 NOW = datetime(2026, 8, 1, 12, 30, 45, tzinfo=timezone.utc)
 

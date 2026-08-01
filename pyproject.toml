@@ -3,7 +3,7 @@ requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "syslog-sender"
+name = "logsalvo"
 version = "2.0.0"
 description = "Standards-aware syslog traffic generator with CLI and desktop GUI"
 readme = "README.md"
@@ -27,15 +27,15 @@ gui = ["PySide6>=6.7"]
 dev = ["pytest>=8", "ruff>=0.6"]
 
 [project.scripts]
-syslog-sender = "syslog_sender.cli:main"
-syslog-sender-gui = "syslog_sender.gui:main"
+logsalvo = "logsalvo.cli:main"
+logsalvo-gui = "logsalvo.gui:main"
 
 [project.urls]
 Homepage = "https://github.com/willcurtis/syslog-sender"
 Issues = "https://github.com/willcurtis/syslog-sender/issues"
 
 [tool.setuptools]
-packages = ["syslog_sender"]
+packages = ["logsalvo"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

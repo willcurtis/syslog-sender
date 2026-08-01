@@ -1,6 +1,6 @@
 import pytest
 
-from syslog_sender.models import FACILITIES, RunConfig, SenderConfig, named_number
+from logsalvo.models import FACILITIES, RunConfig, SenderConfig, named_number
 
 
 def test_named_facility_accepts_name_and_number() -> None:
