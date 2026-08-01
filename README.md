@@ -129,6 +129,8 @@ Press **Start listening** after choosing the settings. LogSalvo reports permissi
 
 Use **Refresh** beside the bind selector after connecting or disconnecting VPN, Wi-Fi, Ethernet, or other network interfaces. The current manual selection is retained even when it is not returned by interface discovery.
 
+Open the selector's drop-down arrow to view detected addresses. Because the field remains editable, you can also type an address that is not currently listed.
+
 ### Privileged ports and elevation
 
 LogSalvo allows ports below 1024, including the standard syslog port 514. Some operating systems require administrator/root permission or a bind capability for these ports. LogSalvo never silently substitutes a different port. If the bind is refused, either:
@@ -429,4 +431,4 @@ The legacy `syslog_sender.py` and standalone `syslog-pro.py` have been removed. 
 
 LogSalvo is released under the [MIT License](LICENSE).
 
-Copyright © 2025–2026 The Tech Shed. LogSalvo version 2.5.0.
+Copyright © 2025–2026 The Tech Shed. LogSalvo version 2.5.1.

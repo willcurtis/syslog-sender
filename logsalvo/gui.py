@@ -158,7 +158,6 @@ QDoubleSpinBox:disabled, QPlainTextEdit:disabled {
     background: #0a171d;
     color: #526b74;
 }
-QComboBox::drop-down { border: none; width: 24px; }
 QComboBox QAbstractItemView {
     background: #0b202b;
     color: #dcecf2;
@@ -942,9 +941,15 @@ def main() -> int:
             listener_grid.setHorizontalSpacing(12)
             listener_grid.setVerticalSpacing(10)
             self.receiver_bind = QComboBox()
+            self.receiver_bind.setObjectName("bindAddressSelector")
             self.receiver_bind.setEditable(True)
             self.receiver_bind.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+            self.receiver_bind.setMaxVisibleItems(16)
             self.receiver_bind.setPlaceholderText("0.0.0.0, ::, or a local address")
+            self.receiver_bind.setAccessibleName("Receiver bind address")
+            self.receiver_bind.setToolTip(
+                "Open the list to select a detected local address, or type an address manually"
+            )
             self.receiver_bind_refresh = QPushButton("Refresh")
             self.receiver_bind_refresh.setToolTip(
                 "Rescan this host's active IPv4 and IPv6 interface addresses"
