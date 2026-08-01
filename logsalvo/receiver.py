@@ -20,6 +20,13 @@ RFC3164 = re.compile(
     r"(?P<hostname>\S+)\s+(?:(?P<app>[^\s:\[]+)(?:\[(?P<procid>[^\]]+)\])?:\s*)?"
     r"(?P<message>.*)$"
 )
+CISCO_IOS = re.compile(
+    r"^(?:(?P<sequence>\d+):\s*)?"
+    r"(?:(?P<timestamp>\*?[A-Z][a-z]{2}\s+[ \d]\d\s+\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:\s+\S+)?)?:?\s*)?"
+    r"%(?P<facility>[A-Z0-9_]+)-(?P<severity>[0-7])-(?P<mnemonic>[A-Z0-9_]+):\s*"
+    r"(?P<message>.*)$",
+    re.IGNORECASE,
+)
 
 FACILITY_NAMES = [
     "kern",
@@ -105,6 +112,43 @@ def _priority_fields(priority: int) -> tuple[int, str, int, str]:
     return facility, facility_name, severity, severity_name
 
 
+def _integer(value: object, minimum: int, maximum: int) -> int | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        result = int(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    return result if minimum <= result <= maximum else None
+
+
+def _first_text(values: dict[str, object], *keys: str) -> str:
+    for key in keys:
+        value = values.get(key)
+        if value is not None and not isinstance(value, (dict, list)):
+            text = str(value).strip()
+            if text:
+                return text
+    return ""
+
+
+def _json_message(values: dict[str, object]) -> str:
+    message = _first_text(values, "message", "msg", "event", "description", "note")
+    note = _first_text(values, "note")
+    event = _first_text(values, "event")
+    if event and note and message in {event, note}:
+        return f"{event}: {note}"
+    return message or json.dumps(values, ensure_ascii=False, separators=(",", ":"))
+
+
+def _parse_json(raw: str) -> dict[str, object] | None:
+    try:
+        value = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
 def parse_syslog(
     payload: bytes,
     *,
@@ -114,9 +158,10 @@ def parse_syslog(
     received_at: datetime | None = None,
 ) -> ReceivedMessage:
     received = received_at or datetime.now(timezone.utc)
-    raw = payload.decode("utf-8", "replace").rstrip("\r\n")
+    raw = payload.decode("utf-8-sig", "replace").rstrip("\x00\r\n")
+    candidate = raw.lstrip()
     for format_name, pattern in (("RFC5424", RFC5424), ("RFC3164", RFC3164)):
-        match = pattern.match(raw)
+        match = pattern.match(candidate)
         if not match:
             continue
         values = match.groupdict(default="")
@@ -144,13 +189,100 @@ def parse_syslog(
             values.get("sd", ""),
             values.get("message", ""),
         )
-    priority_match = re.match(r"^<(\d{1,3})>", raw)
-    priority = int(priority_match.group(1)) if priority_match else None
-    if priority is not None and 0 <= priority <= 191:
+    priority_match = re.match(r"^<(\d{1,3})>", candidate)
+    priority = _integer(priority_match.group(1), 0, 191) if priority_match else None
+    body = candidate[priority_match.end() :].lstrip() if priority is not None else candidate
+    if priority is not None:
         facility, facility_name, severity, severity_name = _priority_fields(priority)
     else:
         facility = severity = None
         facility_name = severity_name = "unknown"
+
+    json_values = _parse_json(body)
+    if json_values is not None:
+        json_facility = _integer(json_values.get("facility", json_values.get("fac_num")), 0, 23)
+        json_severity = _integer(json_values.get("severity", json_values.get("sev_num")), 0, 7)
+        if priority is None and json_facility is not None and json_severity is not None:
+            priority = (json_facility * 8) + json_severity
+        if json_facility is not None:
+            facility = json_facility
+            facility_name = FACILITY_NAMES[facility]
+        else:
+            named_facility = _first_text(json_values, "facility_name", "facility", "fac").lower()
+            if named_facility in FACILITY_NAMES:
+                facility = FACILITY_NAMES.index(named_facility)
+                facility_name = named_facility
+        if json_severity is not None:
+            severity = json_severity
+            severity_name = SEVERITY_NAMES[severity]
+        else:
+            named_severity = _first_text(json_values, "severity_name", "severity", "sev").lower()
+            if named_severity in SEVERITY_NAMES:
+                severity = SEVERITY_NAMES.index(named_severity)
+                severity_name = named_severity
+        if priority is None and facility is not None and severity is not None:
+            priority = (facility * 8) + severity
+        return ReceivedMessage(
+            received_at=received,
+            sender=sender,
+            sender_port=sender_port,
+            protocol=protocol.upper(),
+            raw=raw,
+            format="JSON",
+            priority=priority,
+            facility=facility,
+            facility_name=facility_name,
+            severity=severity,
+            severity_name=severity_name,
+            timestamp=_first_text(json_values, "timestamp", "ts", "time", "@timestamp"),
+            hostname=_first_text(json_values, "hostname", "host", "source", "src"),
+            app=_first_text(json_values, "app", "application", "program", "service"),
+            procid=_first_text(json_values, "procid", "pid", "process_id"),
+            msgid=_first_text(json_values, "msgid", "event", "event_id"),
+            structured_data=json.dumps(json_values, ensure_ascii=False, separators=(",", ":")),
+            message=_json_message(json_values),
+        )
+
+    cisco_match = CISCO_IOS.match(body)
+    if cisco_match:
+        values = cisco_match.groupdict(default="")
+        cisco_severity = int(values["severity"])
+        if severity is None:
+            severity = cisco_severity
+            severity_name = SEVERITY_NAMES[severity]
+        return ReceivedMessage(
+            received_at=received,
+            sender=sender,
+            sender_port=sender_port,
+            protocol=protocol.upper(),
+            raw=raw,
+            format="Cisco IOS",
+            priority=priority,
+            facility=facility,
+            facility_name=facility_name,
+            severity=severity,
+            severity_name=severity_name,
+            timestamp=values["timestamp"],
+            app=values["facility"].upper(),
+            msgid=values["mnemonic"].upper(),
+            message=values["message"],
+        )
+
+    if priority is not None:
+        return ReceivedMessage(
+            received_at=received,
+            sender=sender,
+            sender_port=sender_port,
+            protocol=protocol.upper(),
+            raw=raw,
+            format="PRI",
+            priority=priority,
+            facility=facility,
+            facility_name=facility_name,
+            severity=severity,
+            severity_name=severity_name,
+            message=body,
+        )
     return ReceivedMessage(
         received,
         sender,
@@ -162,8 +294,8 @@ def parse_syslog(
         facility_name=facility_name,
         severity=severity,
         severity_name=severity_name,
-        message=raw,
-        parse_error="Message did not match RFC 3164 or RFC 5424",
+        message=candidate,
+        parse_error="Message did not match a supported syslog or structured raw format",
     )
 
 

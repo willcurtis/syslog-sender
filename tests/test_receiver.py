@@ -50,6 +50,62 @@ def test_parse_rfc3164_and_raw_fallback() -> None:
     assert malformed.parse_error
 
 
+def test_parse_pri_only_raw_message() -> None:
+    parsed = parse_syslog(
+        b"  <134>interface Ethernet1/1 changed state",
+        sender="192.0.2.30",
+        sender_port=514,
+        protocol="udp",
+    )
+    assert parsed.format == "PRI"
+    assert parsed.priority == 134
+    assert parsed.facility_name == "local0"
+    assert parsed.severity_name == "info"
+    assert parsed.message == "interface Ethernet1/1 changed state"
+    assert not parsed.parse_error
+
+
+def test_parse_json_raw_message() -> None:
+    parsed = parse_syslog(
+        b'{"src":"fw-lon-01","app":"kernel","event":"disk_full","note":"95% used",'
+        b'"sev":"crit","sev_num":2,"fac":"local4","fac_num":20,"ts":"2026-08-01T12:30:00Z"}',
+        sender="192.0.2.40",
+        sender_port=514,
+        protocol="udp",
+    )
+    assert parsed.format == "JSON"
+    assert parsed.hostname == "fw-lon-01"
+    assert parsed.app == "kernel"
+    assert parsed.msgid == "disk_full"
+    assert parsed.message == "disk_full: 95% used"
+    assert parsed.facility_name == "local4"
+    assert parsed.severity_name == "crit"
+    assert parsed.priority == 162
+    assert not parsed.parse_error
+
+
+def test_parse_cisco_ios_raw_message() -> None:
+    parsed = parse_syslog(
+        b"000123: Aug  1 12:30:00.123 UTC: %LINK-3-UPDOWN: Interface Gi1/0/1, changed state to down",
+        sender="192.0.2.50",
+        sender_port=514,
+        protocol="udp",
+    )
+    assert parsed.format == "Cisco IOS"
+    assert parsed.app == "LINK"
+    assert parsed.msgid == "UPDOWN"
+    assert parsed.severity_name == "err"
+    assert parsed.message == "Interface Gi1/0/1, changed state to down"
+    assert not parsed.parse_error
+
+
+def test_invalid_priority_is_not_reported_as_valid() -> None:
+    parsed = parse_syslog(b"<999>message", sender="host", sender_port=1, protocol="udp")
+    assert parsed.priority is None
+    assert parsed.format == "raw"
+    assert parsed.parse_error
+
+
 def test_udp_receiver_delivers_message() -> None:
     port = free_port(socket.SOCK_DGRAM)
     received = []
