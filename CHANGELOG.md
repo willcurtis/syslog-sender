@@ -2,6 +2,20 @@
 
 All notable changes to LogSalvo are documented here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [2.2.1] - 2026-08-01
+
+### Fixed
+
+- Raw PRI-prefixed payloads now decode priority, facility, and severity while showing only the message body in the message column.
+- JSON syslog payloads now map common host, application, event, timestamp, facility, severity, and message aliases into receiver fields.
+- Cisco IOS messages now extract their facility, numeric severity, mnemonic, timestamp, and message text.
+- Leading whitespace, UTF-8 byte-order marks, and trailing NUL framing no longer prevent format detection.
+- Invalid priority values are no longer reported as valid parsed priorities.
+
+### Changed
+
+- Recognised structured raw formats are no longer counted as malformed; their original payload is still retained for inspection and export.
+
 ## [2.2.0] - 2026-08-01
 
 ### Added
@@ -91,6 +105,7 @@ All notable changes to LogSalvo are documented here. The project follows [Semant
 
 - Initial UDP-based random syslog sender.
 
+[2.2.1]: https://github.com/willcurtis/syslog-sender/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/willcurtis/syslog-sender/compare/a82f419...v2.2.0
 [2.1.1]: https://github.com/willcurtis/syslog-sender/compare/4e255fd...a82f419
 [2.1.0]: https://github.com/willcurtis/syslog-sender/compare/e10ab32...4e255fd
