@@ -423,4 +423,4 @@ The legacy `syslog_sender.py` and standalone `syslog-pro.py` have been removed. 
 
 LogSalvo is released under the [MIT License](LICENSE).
 
-Copyright © 2025–2026 The Tech Shed. LogSalvo version 2.4.1.
+Copyright © 2025–2026 The Tech Shed. LogSalvo version 2.4.2.

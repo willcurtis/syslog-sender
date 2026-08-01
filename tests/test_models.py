@@ -37,6 +37,7 @@ def test_gui_provides_distinct_light_and_dark_themes() -> None:
         assert "QTabBar#workspaceTabBar" in stylesheet
         assert "QTabBar#senderTabBar" in stylesheet
     assert "QTabBar::tab" not in THEME_STYLESHEETS["dark"]
+    assert "QTabWidget#senderTabs::tab-bar { left: 0px; }" in THEME_STYLESHEETS["dark"]
 
 
 @pytest.mark.parametrize(
