@@ -2,6 +2,13 @@
 
 All notable changes to LogSalvo are documented here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [2.3.1] - 2026-08-01
+
+### Fixed
+
+- UniFi CEF records prefixed with a BSD-style timestamp and hostname but no `<PRI>` header are now recognised and parsed.
+- The timestamp and envelope hostname remain available when those records omit equivalent CEF extension values.
+
 ## [2.3.0] - 2026-08-01
 
 ### Added
@@ -117,6 +124,7 @@ All notable changes to LogSalvo are documented here. The project follows [Semant
 
 - Initial UDP-based random syslog sender.
 
+[2.3.1]: https://github.com/willcurtis/syslog-sender/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/willcurtis/syslog-sender/compare/v2.2.1...v2.3.0
 [2.2.1]: https://github.com/willcurtis/syslog-sender/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/willcurtis/syslog-sender/compare/a82f419...v2.2.0
