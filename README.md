@@ -6,6 +6,20 @@ LogSalvo is a cross-platform Python application for generating controlled syslog
 
 LogSalvo uses The Tech Shed visual identity: deep navy, cyan and teal. The supplied logo is packaged into the desktop application and used as its window icon and About artwork.
 
+## Screenshots
+
+### Send workspace
+
+Configure the destination, transport, message format, templates, and run controls while reviewing the exact encoded message in the live preview.
+
+![LogSalvo Send workspace showing connection settings, live preview, run status, and event log](docs/images/logsalvo-send.png)
+
+### Receive workspace
+
+Listen on a configurable address, port, and protocol; inspect incoming messages; filter the live table; and export the visible results.
+
+![LogSalvo Receive workspace showing listener controls, message filters, parsed syslog table, and message detail](docs/images/logsalvo-receive.png)
+
 ## Highlights
 
 - RFC 3164 and RFC 5424 message generation
