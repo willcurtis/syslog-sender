@@ -5,14 +5,181 @@ import socket
 import sys
 from pathlib import Path
 
+from . import __app_name__, __copyright__, __version__
 from .formatters import build_message
 from .models import FACILITIES, SEVERITIES, MessageConfig, RunConfig, SenderConfig
 from .sender import Sender
 
+STYLESHEET = """
+QWidget#appRoot {
+    background: #081820;
+    color: #dcecf2;
+    font-family: "Inter", "SF Pro Text", "Segoe UI", sans-serif;
+    font-size: 13px;
+}
+QFrame#brandHeader {
+    background: #0b202b;
+    border: 1px solid #154052;
+    border-radius: 14px;
+}
+QLabel#brandLogo { background: transparent; }
+QLabel#productName {
+    color: #f1fbff;
+    font-size: 30px;
+    font-weight: 700;
+}
+QLabel#tagline {
+    color: #00b0f0;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+QLabel#brandDescription { color: #91aeb9; font-size: 12px; }
+QLabel#versionBadge {
+    background: #073442;
+    color: #00c898;
+    border: 1px solid #00a882;
+    border-radius: 11px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 700;
+}
+QTabWidget::pane {
+    background: #0b202b;
+    border: 1px solid #154052;
+    border-radius: 10px;
+    top: -1px;
+}
+QTabBar::tab {
+    background: #0a1b24;
+    color: #7f9ca7;
+    border: 1px solid #154052;
+    border-bottom: none;
+    padding: 10px 24px;
+    margin-right: 3px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    font-weight: 600;
+}
+QTabBar::tab:selected {
+    background: #0b202b;
+    color: #00c898;
+    border-top: 2px solid #00c898;
+}
+QTabBar::tab:hover:!selected { color: #00b0f0; background: #0c2632; }
+QGroupBox {
+    background: #0b202b;
+    border: 1px solid #154052;
+    border-radius: 10px;
+    margin-top: 12px;
+    padding: 12px;
+    font-weight: 600;
+    color: #c9e2ea;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 14px;
+    padding: 0 7px;
+    color: #00b0f0;
+}
+QLabel { color: #b8d0d9; }
+QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QPlainTextEdit {
+    background: #07151c;
+    color: #e4f4f8;
+    border: 1px solid #1a4758;
+    border-radius: 6px;
+    padding: 7px 9px;
+    selection-background-color: #007f9e;
+}
+QLineEdit:focus, QComboBox:focus, QSpinBox:focus,
+QDoubleSpinBox:focus, QPlainTextEdit:focus {
+    border: 1px solid #00b0f0;
+}
+QLineEdit:disabled, QComboBox:disabled, QSpinBox:disabled,
+QDoubleSpinBox:disabled, QPlainTextEdit:disabled {
+    background: #0a171d;
+    color: #526b74;
+}
+QComboBox::drop-down { border: none; width: 24px; }
+QComboBox QAbstractItemView {
+    background: #0b202b;
+    color: #dcecf2;
+    border: 1px solid #1a4758;
+    selection-background-color: #07536a;
+}
+QCheckBox { color: #b8d0d9; spacing: 8px; }
+QCheckBox::indicator {
+    width: 17px;
+    height: 17px;
+    border: 1px solid #2a6072;
+    border-radius: 4px;
+    background: #07151c;
+}
+QCheckBox::indicator:checked {
+    background: #00c898;
+    border-color: #00e1ae;
+}
+QPushButton {
+    background: #12303d;
+    color: #dcecf2;
+    border: 1px solid #245567;
+    border-radius: 7px;
+    padding: 8px 16px;
+    font-weight: 600;
+}
+QPushButton:hover { background: #174456; border-color: #00b0f0; }
+QPushButton:pressed { background: #0d2935; }
+QPushButton:disabled { color: #506873; background: #10232c; border-color: #173744; }
+QPushButton#primaryButton {
+    background: #00a77f;
+    color: #031612;
+    border-color: #00d4a2;
+    min-width: 100px;
+}
+QPushButton#primaryButton:hover { background: #00c898; }
+QPushButton#dangerButton { border-color: #9e5260; color: #ffb6c1; min-width: 80px; }
+QPushButton#dangerButton:hover { background: #6d2633; border-color: #e26c7c; }
+QPushButton#linkButton {
+    background: transparent;
+    border: none;
+    color: #00b0f0;
+    padding: 4px 8px;
+}
+QPushButton#linkButton:hover { color: #00d9ff; text-decoration: underline; }
+QLabel#statusPill {
+    background: #102b36;
+    color: #91aeb9;
+    border: 1px solid #1a4758;
+    border-radius: 7px;
+    padding: 8px 12px;
+    font-weight: 600;
+}
+QLabel#statusPill[state="running"] { color: #68d5ff; border-color: #007ca8; background: #082c3b; }
+QLabel#statusPill[state="success"] { color: #66f2ca; border-color: #008f6c; background: #073328; }
+QLabel#statusPill[state="error"] { color: #ff9cac; border-color: #a44757; background: #381821; }
+QLabel#statusPill[state="stopping"] { color: #ffd28c; border-color: #9d6a20; background: #392a12; }
+QLabel#copyright { color: #607d88; font-size: 11px; }
+QScrollBar:vertical {
+    background: #07151c;
+    width: 11px;
+    margin: 1px;
+}
+QScrollBar::handle:vertical { background: #245567; border-radius: 5px; min-height: 24px; }
+QScrollBar::handle:vertical:hover { background: #00a77f; }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+QToolTip {
+    background: #102b36;
+    color: #e4f4f8;
+    border: 1px solid #00b0f0;
+    padding: 5px;
+}
+"""
+
 
 def main() -> int:
     try:
-        from PySide6.QtCore import QObject, QThread, Signal, Slot
+        from PySide6.QtCore import QObject, Qt, QThread, Signal, Slot
+        from PySide6.QtGui import QIcon, QPixmap
         from PySide6.QtWidgets import (
             QApplication,
             QCheckBox,
@@ -20,6 +187,7 @@ def main() -> int:
             QDoubleSpinBox,
             QFileDialog,
             QFormLayout,
+            QFrame,
             QGroupBox,
             QHBoxLayout,
             QLabel,
@@ -73,8 +241,12 @@ def main() -> int:
     class Window(QMainWindow):
         def __init__(self):
             super().__init__()
-            self.setWindowTitle("LogSalvo 2.0")
-            self.resize(980, 760)
+            self.logo_path = Path(__file__).with_name("assets") / "tts-round-outline.png"
+            self.logo = QPixmap(str(self.logo_path))
+            self.setWindowTitle(f"{__app_name__} · Syslog Traffic Studio · v{__version__}")
+            self.setWindowIcon(QIcon(str(self.logo_path)))
+            self.resize(1080, 860)
+            self.setMinimumSize(900, 720)
             self.thread: QThread | None = None
             self.worker: Worker | None = None
             self._build()
@@ -87,8 +259,50 @@ def main() -> int:
 
         def _build(self) -> None:
             root = QWidget()
+            root.setObjectName("appRoot")
             layout = QVBoxLayout(root)
+            layout.setContentsMargins(24, 20, 24, 16)
+            layout.setSpacing(14)
+
+            header = QFrame()
+            header.setObjectName("brandHeader")
+            header_layout = QHBoxLayout(header)
+            header_layout.setContentsMargins(20, 14, 20, 14)
+            logo = QLabel()
+            logo.setObjectName("brandLogo")
+            logo.setPixmap(
+                self.logo.scaled(
+                    92,
+                    92,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            )
+            logo.setFixedSize(96, 96)
+            header_layout.addWidget(logo)
+            brand_copy = QVBoxLayout()
+            brand_copy.setSpacing(2)
+            product_name = QLabel(__app_name__)
+            product_name.setObjectName("productName")
+            tagline = QLabel("SYSLOG TRAFFIC STUDIO")
+            tagline.setObjectName("tagline")
+            description = QLabel(
+                "Build, preview and transmit standards-aware test traffic with confidence."
+            )
+            description.setObjectName("brandDescription")
+            brand_copy.addWidget(product_name)
+            brand_copy.addWidget(tagline)
+            brand_copy.addWidget(description)
+            header_layout.addLayout(brand_copy)
+            header_layout.addStretch()
+            version = QLabel(f"VERSION {__version__}")
+            version.setObjectName("versionBadge")
+            version.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            header_layout.addWidget(version, alignment=Qt.AlignmentFlag.AlignTop)
+            layout.addWidget(header)
+
             tabs = QTabWidget()
+            tabs.setDocumentMode(True)
             layout.addWidget(tabs)
 
             connection = QWidget()
@@ -194,6 +408,7 @@ def main() -> int:
             tabs.addTab(run_tab, "Run")
 
             preview_group = QGroupBox("Live preview")
+            preview_group.setObjectName("previewGroup")
             preview_layout = QVBoxLayout(preview_group)
             self.preview_box = QPlainTextEdit()
             self.preview_box.setReadOnly(True)
@@ -202,8 +417,10 @@ def main() -> int:
             layout.addWidget(preview_group)
             controls = QHBoxLayout()
             self.start_button = QPushButton("Start")
+            self.start_button.setObjectName("primaryButton")
             self.start_button.clicked.connect(self.start)
             self.stop_button = QPushButton("Stop")
+            self.stop_button.setObjectName("dangerButton")
             self.stop_button.clicked.connect(self.stop)
             self.stop_button.setEnabled(False)
             save_button = QPushButton("Save profile")
@@ -217,14 +434,56 @@ def main() -> int:
             controls.addWidget(load_button)
             layout.addLayout(controls)
             self.status = QLabel("Ready")
+            self.status.setObjectName("statusPill")
+            self.status.setProperty("state", "ready")
+            self.status.setAlignment(Qt.AlignmentFlag.AlignCenter)
             layout.addWidget(self.status)
             self.log = QPlainTextEdit()
             self.log.setReadOnly(True)
+            self.log.setPlaceholderText("Transmission events and errors will appear here.")
             layout.addWidget(self.log)
+
+            footer = QHBoxLayout()
+            copyright_label = QLabel(__copyright__)
+            copyright_label.setObjectName("copyright")
+            footer.addWidget(copyright_label)
+            footer.addStretch()
+            about_button = QPushButton("About LogSalvo")
+            about_button.setObjectName("linkButton")
+            about_button.clicked.connect(self.about)
+            footer.addWidget(about_button)
+            layout.addLayout(footer)
             self.setCentralWidget(root)
+            self.setStyleSheet(STYLESHEET)
             for widget in [self.format, self.facility, self.severity]:
                 widget.currentTextChanged.connect(self.preview)
             self.wire_size.valueChanged.connect(self.preview)
+
+        def set_status(self, text: str, state: str) -> None:
+            self.status.setText(text)
+            self.status.setProperty("state", state)
+            self.status.style().unpolish(self.status)
+            self.status.style().polish(self.status)
+
+        @Slot()
+        def about(self) -> None:
+            dialog = QMessageBox(self)
+            dialog.setWindowTitle(f"About {__app_name__}")
+            dialog.setIconPixmap(
+                self.logo.scaled(
+                    148,
+                    148,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            )
+            dialog.setText(f"<h2>{__app_name__}</h2><p><b>Version {__version__}</b></p>")
+            dialog.setInformativeText(
+                "A professional RFC 3164/5424 traffic generator for testing collectors, "
+                "SIEM platforms and log pipelines.<br><br>"
+                f"{__copyright__}<br>Released under the MIT License."
+            )
+            dialog.exec()
 
         def message_config(self) -> MessageConfig:
             return MessageConfig(
@@ -312,14 +571,16 @@ def main() -> int:
             self.log.clear()
             self.start_button.setEnabled(False)
             self.stop_button.setEnabled(True)
+            self.set_status("Starting transmission…", "running")
             self.thread = QThread(self)
             self.worker = Worker(sender)
             self.worker.moveToThread(self.thread)
             self.thread.started.connect(self.worker.run)
             self.worker.log.connect(self.log.appendPlainText)
             self.worker.progress.connect(
-                lambda attempted, sent, failed, rate: self.status.setText(
-                    f"Attempted {attempted} | Sent {sent} | Failed {failed} | {rate:.1f} msg/s"
+                lambda attempted, sent, failed, rate: self.set_status(
+                    f"Attempted {attempted} | Sent {sent} | Failed {failed} | {rate:.1f} msg/s",
+                    "running",
                 )
             )
             self.worker.finished.connect(self.done)
@@ -333,14 +594,15 @@ def main() -> int:
         def stop(self) -> None:
             if self.worker:
                 self.worker.cancel()
-                self.status.setText("Stopping…")
+                self.set_status("Stopping…", "stopping")
 
         @Slot(object)
         def done(self, stats: object) -> None:
             self.start_button.setEnabled(True)
             self.stop_button.setEnabled(False)
-            self.status.setText(
-                f"Complete: {stats.sent} sent, {stats.failed} failed in {stats.elapsed:.2f}s"
+            self.set_status(
+                f"Complete: {stats.sent} sent, {stats.failed} failed in {stats.elapsed:.2f}s",
+                "success" if not stats.failed else "error",
             )
             self.worker = None
             self.thread = None
@@ -349,7 +611,7 @@ def main() -> int:
         def failed(self, error: str) -> None:
             self.start_button.setEnabled(True)
             self.stop_button.setEnabled(False)
-            self.status.setText("Failed")
+            self.set_status("Transmission failed", "error")
             self.log.appendPlainText(f"ERROR: {error}")
             self.worker = None
             self.thread = None
@@ -449,6 +711,12 @@ def main() -> int:
             event.accept()
 
     application = QApplication(sys.argv)
+    application.setApplicationName(__app_name__)
+    application.setApplicationDisplayName(__app_name__)
+    application.setApplicationVersion(__version__)
+    application.setOrganizationName("The Tech Shed")
+    logo_path = Path(__file__).with_name("assets") / "tts-round-outline.png"
+    application.setWindowIcon(QIcon(str(logo_path)))
     window = Window()
     window.show()
     return application.exec()

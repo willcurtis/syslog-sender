@@ -5,6 +5,7 @@ import os
 import socket
 import sys
 
+from . import __copyright__, __version__
 from .models import FACILITIES, SEVERITIES, MessageConfig, RunConfig, SenderConfig, named_number
 from .sender import Sender
 from .templates import EXAMPLE_MESSAGES
@@ -34,6 +35,9 @@ def named(value: str, choices: dict[str, int], label: str) -> int:
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(
         prog="logsalvo", description="LogSalvo RFC 3164/5424 syslog traffic generator."
+    )
+    result.add_argument(
+        "--version", action="version", version=f"%(prog)s {__version__} · {__copyright__}"
     )
     result.add_argument("target", help="collector IP address or hostname")
     result.add_argument("-p", "--port", type=positive_port, default=None)
