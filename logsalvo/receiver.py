@@ -27,6 +27,17 @@ CISCO_IOS = re.compile(
     r"(?P<message>.*)$",
     re.IGNORECASE,
 )
+UNIFI_AP = re.compile(
+    r"^(?P<mac>[0-9a-f]{12}),(?P<device>[^:\s,]+):\s*"
+    r"(?P<app>[^\s:\[]+)(?:\[(?P<procid>[^\]]+)\])?:\s*(?P<message>.*)$",
+    re.IGNORECASE,
+)
+UNIFI_GATEWAY = re.compile(
+    r"^(?P<hostname>(?:UDM|UCG|UXG|USG|UniFi|CloudKey)[^\s]*)\s+"
+    r"(?P<app>[^\s:\[]+)(?:\[(?P<procid>[^\]]+)\])?:\s*(?P<message>.*)$",
+    re.IGNORECASE,
+)
+CEF_EXTENSION_KEY = re.compile(r"(?:^|\s)(?P<key>[A-Za-z][A-Za-z0-9_]*)=")
 
 FACILITY_NAMES = [
     "kern",
@@ -149,6 +160,112 @@ def _parse_json(raw: str) -> dict[str, object] | None:
     return value if isinstance(value, dict) else None
 
 
+def _cef_parts(raw: str) -> list[str] | None:
+    if not raw.startswith("CEF:"):
+        return None
+    parts: list[str] = []
+    current: list[str] = []
+    escaped = False
+    for character in raw:
+        if escaped:
+            current.append(character)
+            escaped = False
+        elif character == "\\":
+            escaped = True
+        elif character == "|" and len(parts) < 7:
+            parts.append("".join(current))
+            current = []
+        else:
+            current.append(character)
+    if escaped:
+        current.append("\\")
+    parts.append("".join(current))
+    return parts if len(parts) == 8 else None
+
+
+def _cef_extension(raw: str) -> dict[str, str]:
+    matches = list(CEF_EXTENSION_KEY.finditer(raw))
+    values: dict[str, str] = {}
+    for index, match in enumerate(matches):
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(raw)
+        values[match.group("key")] = raw[match.end() : end].strip()
+    return values
+
+
+def _cef_severity(value: str) -> int | None:
+    severity = _integer(value, 0, 10)
+    if severity is None:
+        return None
+    if severity <= 3:
+        return 6
+    if severity <= 6:
+        return 4
+    if severity <= 8:
+        return 3
+    return 2 if severity == 9 else 1
+
+
+def _parse_cef(
+    body: str,
+    *,
+    received: datetime,
+    sender: str,
+    sender_port: int,
+    protocol: str,
+    raw: str,
+    priority: int | None = None,
+    timestamp: str = "",
+    envelope_hostname: str = "",
+) -> ReceivedMessage | None:
+    parts = _cef_parts(body)
+    if parts is None:
+        return None
+    version, vendor, product, device_version, event_id, name, cef_level, extension = parts
+    if not version.removeprefix("CEF:").isdigit():
+        return None
+    fields = _cef_extension(extension)
+    is_unifi = vendor.casefold() == "ubiquiti" or "unifi" in product.casefold()
+    if priority is not None:
+        facility, facility_name, severity, severity_name = _priority_fields(priority)
+    else:
+        facility = None
+        facility_name = "unknown"
+        severity = _cef_severity(cef_level)
+        severity_name = SEVERITY_NAMES[severity] if severity is not None else "unknown"
+    hostname = fields.get("UNIFIhost", fields.get("dhost", envelope_hostname))
+    message = fields.get("msg", name)
+    return ReceivedMessage(
+        received_at=received,
+        sender=sender,
+        sender_port=sender_port,
+        protocol=protocol.upper(),
+        raw=raw,
+        format="UniFi CEF" if is_unifi else "CEF",
+        priority=priority,
+        facility=facility,
+        facility_name=facility_name,
+        severity=severity,
+        severity_name=severity_name,
+        timestamp=timestamp,
+        hostname=hostname,
+        app=product,
+        msgid=event_id,
+        structured_data=json.dumps(
+            {
+                "vendor": vendor,
+                "product": product,
+                "device_version": device_version,
+                "name": name,
+                "cef_severity": cef_level,
+                **fields,
+            },
+            ensure_ascii=False,
+            separators=(",", ":"),
+        ),
+        message=message,
+    )
+
+
 def parse_syslog(
     payload: bytes,
     *,
@@ -169,6 +286,22 @@ def parse_syslog(
         if not 0 <= priority <= 191:
             break
         facility, facility_name, severity, severity_name = _priority_fields(priority)
+        nested_message = values.get("message", "")
+        if values.get("app", "").casefold() == "cef":
+            nested_message = f"CEF:{nested_message}"
+        cef_message = _parse_cef(
+            nested_message,
+            received=received,
+            sender=sender,
+            sender_port=sender_port,
+            protocol=protocol,
+            raw=raw,
+            priority=priority,
+            timestamp=values.get("timestamp", ""),
+            envelope_hostname=values.get("hostname", ""),
+        )
+        if cef_message is not None:
+            return cef_message
         return ReceivedMessage(
             received,
             sender,
@@ -197,6 +330,18 @@ def parse_syslog(
     else:
         facility = severity = None
         facility_name = severity_name = "unknown"
+
+    cef_message = _parse_cef(
+        body,
+        received=received,
+        sender=sender,
+        sender_port=sender_port,
+        protocol=protocol,
+        raw=raw,
+        priority=priority,
+    )
+    if cef_message is not None:
+        return cef_message
 
     json_values = _parse_json(body)
     if json_values is not None:
@@ -265,6 +410,32 @@ def parse_syslog(
             timestamp=values["timestamp"],
             app=values["facility"].upper(),
             msgid=values["mnemonic"].upper(),
+            message=values["message"],
+        )
+
+    for pattern in (UNIFI_AP, UNIFI_GATEWAY):
+        unifi_match = pattern.match(body)
+        if not unifi_match:
+            continue
+        values = unifi_match.groupdict(default="")
+        hostname = values.get("hostname") or values.get("device", "")
+        identity = values.get("mac", "")
+        return ReceivedMessage(
+            received_at=received,
+            sender=sender,
+            sender_port=sender_port,
+            protocol=protocol.upper(),
+            raw=raw,
+            format="UniFi device",
+            priority=priority,
+            facility=facility,
+            facility_name=facility_name,
+            severity=severity,
+            severity_name=severity_name,
+            hostname=hostname,
+            app=values["app"],
+            procid=values["procid"],
+            structured_data=f"device_mac={identity}" if identity else "",
             message=values["message"],
         )
 

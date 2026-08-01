@@ -121,9 +121,11 @@ Running an entire desktop application as root carries risk. Prefer a narrowly sc
 
 ### Live message view
 
-Incoming RFC 3164 and RFC 5424 messages are parsed into received time, sender, transport, hostname, facility, severity, application, and message columns. LogSalvo also understands common raw payloads: PRI-prefixed message bodies, JSON objects with conventional syslog field names, and Cisco IOS `%FACILITY-SEVERITY-MNEMONIC` messages. Severity values are colour-coded. Messages that cannot be recognised remain available unchanged as raw records and are included in the malformed counter.
+Incoming RFC 3164 and RFC 5424 messages are parsed into received time, sender, transport, hostname, facility, severity, application, and message columns. LogSalvo also understands common raw payloads: PRI-prefixed message bodies, JSON objects with conventional syslog field names, Cisco IOS `%FACILITY-SEVERITY-MNEMONIC` messages, CEF events, and UniFi device logs. Severity values are colour-coded. Messages that cannot be recognised remain available unchanged as raw records and are included in the malformed counter.
 
 For JSON payloads, common aliases such as `src`/`host`, `app`, `event`, `message`/`note`, `fac`/`fac_num`, `sev`/`sev_num`, and `ts` are mapped into the corresponding receiver fields. The complete JSON object remains available in the detail view and exports.
+
+UniFi support includes current Ubiquiti CEF/SIEM exports, CEF wrapped in an RFC 3164 envelope, access-point `MAC,device-firmware: process[pid]: message` records, and gateway `hostname process[pid]: message` records. CEF extensions are retained as structured JSON in the detail view and exported data.
 
 Select a row to inspect every parsed field and the original payload. The **Pause display** control keeps receiving into a bounded queue while holding the visible table steady; resume to add queued messages. **Clear** removes captured data from memory without stopping the listener.
 
@@ -407,4 +409,4 @@ The legacy `syslog_sender.py` and standalone `syslog-pro.py` have been removed. 
 
 LogSalvo is released under the [MIT License](LICENSE).
 
-Copyright © 2025–2026 The Tech Shed. LogSalvo version 2.2.1.
+Copyright © 2025–2026 The Tech Shed. LogSalvo version 2.3.0.
