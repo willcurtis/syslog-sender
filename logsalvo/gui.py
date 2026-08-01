@@ -360,6 +360,18 @@ QPushButton#themeSwitch:hover { background: #c8f1e7; border-color: #007f64; }
 THEME_STYLESHEETS = {"dark": STYLESHEET, "light": LIGHT_STYLESHEET}
 
 
+def ordered_bind_addresses(addresses: list[str]) -> list[str]:
+    """Return unique bind addresses with the safest common choices first."""
+    preferred = ["0.0.0.0", "::", "127.0.0.1", "::1"]
+    unique = {address.strip() for address in addresses if address.strip()}
+    unique.update(preferred)
+    remainder = sorted(
+        unique.difference(preferred),
+        key=lambda address: (":" in address, address.casefold()),
+    )
+    return preferred + remainder
+
+
 def main() -> int:
     try:
         from PySide6.QtCore import (
@@ -374,6 +386,7 @@ def main() -> int:
             Slot,
         )
         from PySide6.QtGui import QBrush, QColor, QIcon, QPixmap
+        from PySide6.QtNetwork import QNetworkInterface
         from PySide6.QtWidgets import (
             QAbstractItemView,
             QApplication,
@@ -928,8 +941,16 @@ def main() -> int:
             listener_grid.setContentsMargins(18, 18, 18, 14)
             listener_grid.setHorizontalSpacing(12)
             listener_grid.setVerticalSpacing(10)
-            self.receiver_bind = QLineEdit("0.0.0.0")
+            self.receiver_bind = QComboBox()
+            self.receiver_bind.setEditable(True)
+            self.receiver_bind.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
             self.receiver_bind.setPlaceholderText("0.0.0.0, ::, or a local address")
+            self.receiver_bind_refresh = QPushButton("Refresh")
+            self.receiver_bind_refresh.setToolTip(
+                "Rescan this host's active IPv4 and IPv6 interface addresses"
+            )
+            self.receiver_bind_refresh.clicked.connect(self.refresh_bind_addresses)
+            self.refresh_bind_addresses()
             self.receiver_port = QSpinBox()
             self.receiver_port.setRange(1, 65535)
             self.receiver_port.setValue(5514)
@@ -956,8 +977,14 @@ def main() -> int:
                 widget.setMinimumHeight(38)
                 widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
             self.receiver_bind.setMinimumWidth(240)
+            self.receiver_bind_refresh.setMinimumHeight(38)
+            bind_address_row = QHBoxLayout()
+            bind_address_row.setContentsMargins(0, 0, 0, 0)
+            bind_address_row.setSpacing(8)
+            bind_address_row.addWidget(self.receiver_bind, 1)
+            bind_address_row.addWidget(self.receiver_bind_refresh)
             listener_grid.addWidget(QLabel("Bind address"), 0, 0)
-            listener_grid.addWidget(self.receiver_bind, 1, 0)
+            listener_grid.addLayout(bind_address_row, 1, 0)
             listener_grid.addWidget(QLabel("Port"), 0, 1)
             listener_grid.addWidget(self.receiver_port, 1, 1)
             listener_grid.addWidget(QLabel("Protocol"), 0, 2)
@@ -1079,6 +1106,19 @@ def main() -> int:
             self.receiver_retention.valueChanged.connect(self.receiver_model.set_maximum)
             return page
 
+        @Slot()
+        def refresh_bind_addresses(self) -> None:
+            current = self.receiver_bind.currentText().strip() or "0.0.0.0"
+            detected = [address.toString() for address in QNetworkInterface.allAddresses()]
+            choices = ordered_bind_addresses(detected)
+            if current not in choices:
+                choices.append(current)
+            self.receiver_bind.blockSignals(True)
+            self.receiver_bind.clear()
+            self.receiver_bind.addItems(choices)
+            self.receiver_bind.setCurrentText(current)
+            self.receiver_bind.blockSignals(False)
+
         def set_receiver_status(self, text: str, state: str) -> None:
             self.receiver_status.setText(text)
             self.receiver_status.setProperty("state", state)
@@ -1088,7 +1128,7 @@ def main() -> int:
         @Slot()
         def start_receiver(self) -> None:
             config = ReceiverConfig(
-                self.receiver_bind.text().strip() or "0.0.0.0",
+                self.receiver_bind.currentText().strip() or "0.0.0.0",
                 self.receiver_port.value(),
                 self.receiver_protocol.currentText().lower(),
                 self.receiver_framing.currentText(),
@@ -1125,6 +1165,7 @@ def main() -> int:
             self.receiver_stop.setEnabled(True)
             for widget in (
                 self.receiver_bind,
+                self.receiver_bind_refresh,
                 self.receiver_port,
                 self.receiver_protocol,
                 self.receiver_framing,
@@ -1142,7 +1183,12 @@ def main() -> int:
                 self.receiver = None
             self.receiver_start.setEnabled(True)
             self.receiver_stop.setEnabled(False)
-            for widget in (self.receiver_bind, self.receiver_port, self.receiver_protocol):
+            for widget in (
+                self.receiver_bind,
+                self.receiver_bind_refresh,
+                self.receiver_port,
+                self.receiver_protocol,
+            ):
                 widget.setEnabled(True)
             self.receiver_framing.setEnabled(self.receiver_protocol.currentText() == "TCP")
             self.set_receiver_status("Stopped", "ready")
