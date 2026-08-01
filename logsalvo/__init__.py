@@ -4,6 +4,6 @@ from .models import MessageConfig, RunConfig, SenderConfig, Stats
 from .sender import Sender
 
 __all__ = ["MessageConfig", "RunConfig", "Sender", "SenderConfig", "Stats"]
-__version__ = "2.4.1"
+__version__ = "2.4.2"
 __app_name__ = "LogSalvo"
 __copyright__ = "Copyright © 2025–2026 The Tech Shed"

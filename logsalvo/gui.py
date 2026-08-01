@@ -96,7 +96,7 @@ QTabWidget#senderTabs::pane {
     border-radius: 9px;
     top: -1px;
 }
-QTabWidget#senderTabs::tab-bar { left: 12px; }
+QTabWidget#senderTabs::tab-bar { left: 0px; }
 QTabBar#senderTabBar {
     background: #0b202b;
     border: none;

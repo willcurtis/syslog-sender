@@ -2,6 +2,12 @@
 
 All notable changes to LogSalvo are documented here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [2.4.2] - 2026-08-01
+
+### Fixed
+
+- Removed the extra secondary-tab offset so Connection aligns with the Send workspace tab and the left edge of its content card.
+
 ## [2.4.1] - 2026-08-01
 
 ### Fixed
@@ -148,6 +154,7 @@ All notable changes to LogSalvo are documented here. The project follows [Semant
 
 - Initial UDP-based random syslog sender.
 
+[2.4.2]: https://github.com/willcurtis/logsalvo/compare/v2.4.1...v2.4.2
 [2.4.1]: https://github.com/willcurtis/logsalvo/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/willcurtis/logsalvo/compare/v2.3.1...v2.4.0
 [2.3.1]: https://github.com/willcurtis/logsalvo/compare/v2.3.0...v2.3.1
