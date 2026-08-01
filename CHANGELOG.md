@@ -2,6 +2,13 @@
 
 All notable changes to LogSalvo are documented here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [2.6.0] - 2026-08-02
+
+### Added
+
+- Expandable received-log view that gives the message table substantially more vertical space while retaining filters and capture actions.
+- One-click layout restoration, including the previous table and message-detail splitter proportions.
+
 ## [2.5.1] - 2026-08-02
 
 ### Fixed
@@ -177,6 +184,7 @@ All notable changes to LogSalvo are documented here. The project follows [Semant
 
 - Initial UDP-based random syslog sender.
 
+[2.6.0]: https://github.com/willcurtis/logsalvo/compare/v2.5.1...v2.6.0
 [2.5.1]: https://github.com/willcurtis/logsalvo/compare/v2.5.0...v2.5.1
 [2.5.0]: https://github.com/willcurtis/logsalvo/compare/v2.4.2...v2.5.0
 [2.4.2]: https://github.com/willcurtis/logsalvo/compare/v2.4.1...v2.4.2
