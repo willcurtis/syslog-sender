@@ -52,34 +52,78 @@ QLabel#versionBadge {
     font-size: 11px;
     font-weight: 700;
 }
-QTabWidget::pane {
+QTabWidget#workspaceTabs {
+    background: #081820;
+    border: none;
+}
+QTabWidget#workspaceTabs::pane {
     background: #0b202b;
     border: 1px solid #154052;
-    border-radius: 10px;
+    border-radius: 12px;
+    top: 7px;
+}
+QTabWidget#workspaceTabs::tab-bar { left: 0px; }
+QTabBar#workspaceTabBar {
+    background: #081820;
+    border: none;
+}
+QTabBar#workspaceTabBar::tab {
+    background: #0c2632;
+    color: #91aeb9;
+    border: 1px solid #1a4758;
+    border-radius: 9px;
+    padding: 10px 28px;
+    margin-right: 7px;
+    font-weight: 700;
+}
+QTabBar#workspaceTabBar::tab:selected {
+    background: #00a77f;
+    color: #031612;
+    border-color: #00d4a2;
+}
+QTabBar#workspaceTabBar::tab:hover:!selected {
+    background: #123846;
+    color: #68d5ff;
+    border-color: #007ca8;
+}
+QTabWidget#senderTabs {
+    background: #0b202b;
+    border: none;
+}
+QTabWidget#senderTabs::pane {
+    background: #0b202b;
+    border: 1px solid #154052;
+    border-radius: 9px;
     top: -1px;
+}
+QTabWidget#senderTabs::tab-bar { left: 12px; }
+QTabBar#senderTabBar {
+    background: #0b202b;
+    border: none;
+}
+QTabBar#senderTabBar::tab {
+    background: transparent;
+    color: #7f9ca7;
+    border: none;
+    border-bottom: 3px solid transparent;
+    padding: 10px 22px 9px 22px;
+    margin: 0 5px 0 0;
+    font-weight: 600;
+}
+QTabBar#senderTabBar::tab:selected {
+    background: #102b36;
+    color: #00c898;
+    border-bottom-color: #00c898;
+}
+QTabBar#senderTabBar::tab:hover:!selected {
+    background: #0c2632;
+    color: #00b0f0;
 }
 QScrollArea#tabScroll, QScrollArea#tabScroll QWidget#qt_scrollarea_viewport,
 QWidget#tabPage {
     background: #0b202b;
     border: none;
 }
-QTabBar::tab {
-    background: #0a1b24;
-    color: #7f9ca7;
-    border: 1px solid #154052;
-    border-bottom: none;
-    padding: 10px 24px;
-    margin-right: 3px;
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
-    font-weight: 600;
-}
-QTabBar::tab:selected {
-    background: #0b202b;
-    color: #00c898;
-    border-top: 2px solid #00c898;
-}
-QTabBar::tab:hover:!selected { color: #00b0f0; background: #0c2632; }
 QGroupBox {
     background: #0b202b;
     border: 1px solid #154052;
@@ -230,15 +274,38 @@ LIGHT_STYLESHEET = (
     STYLESHEET
     + """
 QWidget#appRoot { background: #eef6f8; color: #173440; }
-QFrame#brandHeader, QTabWidget::pane, QScrollArea#tabScroll,
+QFrame#brandHeader, QTabWidget#workspaceTabs::pane, QTabWidget#senderTabs::pane,
+QScrollArea#tabScroll,
 QScrollArea#tabScroll QWidget#qt_scrollarea_viewport, QWidget#tabPage,
 QWidget#workspacePage, QGroupBox { background: #ffffff; border-color: #b9d4dc; }
 QLabel#productName { color: #092a36; }
 QLabel#brandDescription { color: #587985; }
 QLabel#versionBadge { background: #e2f8f3; color: #007c60; border-color: #00a882; }
-QTabBar::tab { background: #dfecef; color: #526f79; border-color: #b9d4dc; }
-QTabBar::tab:selected { background: #ffffff; color: #007f64; border-top-color: #00a77f; }
-QTabBar::tab:hover:!selected { color: #007ca8; background: #edf7f9; }
+QTabWidget#workspaceTabs { background: #eef6f8; }
+QTabBar#workspaceTabBar { background: #eef6f8; }
+QTabBar#workspaceTabBar::tab {
+    background: #dcecef;
+    color: #456873;
+    border-color: #a9c8d0;
+}
+QTabBar#workspaceTabBar::tab:selected {
+    background: #008f6c;
+    color: #ffffff;
+    border-color: #00765a;
+}
+QTabBar#workspaceTabBar::tab:hover:!selected {
+    background: #c9e2e7;
+    color: #005f82;
+    border-color: #68aebf;
+}
+QTabWidget#senderTabs, QTabBar#senderTabBar { background: #ffffff; }
+QTabBar#senderTabBar::tab { background: transparent; color: #587985; }
+QTabBar#senderTabBar::tab:selected {
+    background: #e7f5f2;
+    color: #007c60;
+    border-bottom-color: #00a77f;
+}
+QTabBar#senderTabBar::tab:hover:!selected { background: #edf7f9; color: #007ca8; }
 QGroupBox { color: #244a57; }
 QGroupBox::title, QLabel#tagline { color: #007ca8; }
 QLabel { color: #365965; }
@@ -636,6 +703,8 @@ def main() -> int:
             workspace = QTabWidget()
             workspace.setObjectName("workspaceTabs")
             workspace.setDocumentMode(True)
+            workspace.tabBar().setObjectName("workspaceTabBar")
+            workspace.tabBar().setDrawBase(False)
 
             sender_page = QWidget()
             sender_page.setObjectName("workspacePage")
@@ -644,7 +713,10 @@ def main() -> int:
             sender_layout.setSpacing(12)
 
             tabs = QTabWidget()
+            tabs.setObjectName("senderTabs")
             tabs.setDocumentMode(True)
+            tabs.tabBar().setObjectName("senderTabBar")
+            tabs.tabBar().setDrawBase(False)
             tabs.setMinimumHeight(420)
             sender_layout.addWidget(tabs, 3)
 
