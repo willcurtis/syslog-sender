@@ -1,6 +1,6 @@
 # LogSalvo
 
-<img src="https://raw.githubusercontent.com/willcurtis/syslog-sender/main/logsalvo/assets/tts-round-outline.png" alt="The Tech Shed logo" width="180">
+<img src="https://raw.githubusercontent.com/willcurtis/logsalvo/main/logsalvo/assets/tts-round-outline.png" alt="The Tech Shed logo" width="180">
 
 LogSalvo is a cross-platform Python application for generating controlled syslog traffic when testing collectors, SIEM platforms, firewall rules, parsers, alerts, and log pipelines. Version 2 provides both a command-line interface and a PySide6 desktop GUI over the same tested sender core.
 
@@ -52,8 +52,8 @@ The CLI works on Windows, macOS, and Linux using the Python standard library.
 Clone and install the CLI:
 
 ```bash
-git clone https://github.com/willcurtis/syslog-sender.git
-cd syslog-sender
+git clone https://github.com/willcurtis/logsalvo.git
+cd logsalvo
 python3 -m venv .venv
 source .venv/bin/activate       # Windows PowerShell: .venv\Scripts\Activate.ps1
 python -m pip install .
