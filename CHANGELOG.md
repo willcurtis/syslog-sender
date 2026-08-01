@@ -2,6 +2,18 @@
 
 All notable changes to LogSalvo are documented here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [2.4.0] - 2026-08-01
+
+### Added
+
+- Header switch for changing between Dark mode and a complete high-contrast Light mode.
+- Persistent appearance preference that restores the selected theme on the next launch.
+- Theme-aware receiver severity colours for legibility in both appearances.
+
+### Changed
+
+- Forms, tabs, tables, controls, status states, scrollbars, tooltips, and dialogs now share the active application theme.
+
 ## [2.3.1] - 2026-08-01
 
 ### Fixed
@@ -124,6 +136,7 @@ All notable changes to LogSalvo are documented here. The project follows [Semant
 
 - Initial UDP-based random syslog sender.
 
+[2.4.0]: https://github.com/willcurtis/logsalvo/compare/v2.3.1...v2.4.0
 [2.3.1]: https://github.com/willcurtis/logsalvo/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/willcurtis/logsalvo/compare/v2.2.1...v2.3.0
 [2.2.1]: https://github.com/willcurtis/logsalvo/compare/v2.2.0...v2.2.1

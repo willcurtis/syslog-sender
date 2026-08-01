@@ -95,7 +95,7 @@ logsalvo-gui
 
 ## Desktop GUI
 
-The GUI separates configuration into Connection, Message, and Run tabs.
+The GUI separates configuration into Connection, Message, and Run tabs. Use the appearance switch beside the version badge to change between Dark and Light modes; LogSalvo remembers the selection for future launches.
 
 1. Enter the collector address, port, and transport.
 2. Configure TLS and certificates when required.
@@ -423,4 +423,4 @@ The legacy `syslog_sender.py` and standalone `syslog-pro.py` have been removed. 
 
 LogSalvo is released under the [MIT License](LICENSE).
 
-Copyright © 2025–2026 The Tech Shed. LogSalvo version 2.3.1.
+Copyright © 2025–2026 The Tech Shed. LogSalvo version 2.4.0.
