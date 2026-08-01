@@ -119,13 +119,15 @@ Select the **Receive** workspace to run LogSalvo as a local syslog listener. The
 
 | Setting | Description |
 | --- | --- |
-| Bind address | `0.0.0.0` for all IPv4 interfaces, `::` for IPv6, `127.0.0.1` for local-only traffic, or a specific local address |
+| Bind address | Editable selector containing `0.0.0.0`, `::`, loopback addresses, and detected host IPv4/IPv6 interface addresses; manual entry remains available |
 | Port | Any user-selected port from 1 through 65535; default 5514 |
 | Protocol | UDP or TCP |
 | TCP framing | Automatic detection, RFC 6587 octet-counting, or newline-delimited messages |
 | Retention | Maximum number of messages kept in memory; default 10,000 |
 
 Press **Start listening** after choosing the settings. LogSalvo reports permission errors, address conflicts, and invalid local addresses directly in the listener status and an explanatory dialog.
+
+Use **Refresh** beside the bind selector after connecting or disconnecting VPN, Wi-Fi, Ethernet, or other network interfaces. The current manual selection is retained even when it is not returned by interface discovery.
 
 ### Privileged ports and elevation
 
@@ -427,4 +429,4 @@ The legacy `syslog_sender.py` and standalone `syslog-pro.py` have been removed. 
 
 LogSalvo is released under the [MIT License](LICENSE).
 
-Copyright © 2025–2026 The Tech Shed. LogSalvo version 2.4.2.
+Copyright © 2025–2026 The Tech Shed. LogSalvo version 2.5.0.

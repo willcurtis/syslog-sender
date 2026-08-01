@@ -5,7 +5,7 @@ import pytest
 import logsalvo
 from logsalvo import __copyright__, __version__
 from logsalvo.cli import parser
-from logsalvo.gui import THEME_STYLESHEETS
+from logsalvo.gui import THEME_STYLESHEETS, ordered_bind_addresses
 from logsalvo.models import FACILITIES, RunConfig, SenderConfig, named_number
 
 
@@ -38,6 +38,12 @@ def test_gui_provides_distinct_light_and_dark_themes() -> None:
         assert "QTabBar#senderTabBar" in stylesheet
     assert "QTabBar::tab" not in THEME_STYLESHEETS["dark"]
     assert "QTabWidget#senderTabs::tab-bar { left: 0px; }" in THEME_STYLESHEETS["dark"]
+
+
+def test_bind_addresses_are_deduplicated_and_ordered() -> None:
+    addresses = ordered_bind_addresses(["192.0.2.20", "::1", "10.0.0.4", "192.0.2.20"])
+    assert addresses[:4] == ["0.0.0.0", "::", "127.0.0.1", "::1"]
+    assert addresses[4:] == ["10.0.0.4", "192.0.2.20"]
 
 
 @pytest.mark.parametrize(

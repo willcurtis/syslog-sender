@@ -2,6 +2,18 @@
 
 All notable changes to LogSalvo are documented here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [2.5.0] - 2026-08-02
+
+### Added
+
+- Editable bind-address selector populated with the host's IPv4 and IPv6 interface addresses.
+- Refresh control for detecting interface changes such as VPN, Wi-Fi, and Ethernet connections without restarting LogSalvo.
+
+### Changed
+
+- Wildcard and loopback bind choices are ordered first, detected addresses are deduplicated, and manual address entry remains supported.
+- Bind-address selection and refresh are locked while the receiver is listening.
+
 ## [2.4.2] - 2026-08-01
 
 ### Fixed
@@ -154,6 +166,7 @@ All notable changes to LogSalvo are documented here. The project follows [Semant
 
 - Initial UDP-based random syslog sender.
 
+[2.5.0]: https://github.com/willcurtis/logsalvo/compare/v2.4.2...v2.5.0
 [2.4.2]: https://github.com/willcurtis/logsalvo/compare/v2.4.1...v2.4.2
 [2.4.1]: https://github.com/willcurtis/logsalvo/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/willcurtis/logsalvo/compare/v2.3.1...v2.4.0
