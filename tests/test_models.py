@@ -1,11 +1,30 @@
+from pathlib import Path
+
 import pytest
 
+import logsalvo
+from logsalvo import __copyright__, __version__
+from logsalvo.cli import parser
 from logsalvo.models import FACILITIES, RunConfig, SenderConfig, named_number
 
 
 def test_named_facility_accepts_name_and_number() -> None:
     assert named_number("local4", FACILITIES, "facility") == 20
     assert named_number("20", FACILITIES, "facility") == 20
+
+
+def test_version_metadata_is_exposed_by_cli(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as exit_info:
+        parser().parse_args(["--version"])
+    assert exit_info.value.code == 0
+    output = capsys.readouterr().out
+    assert __version__ in output
+    assert __copyright__ in output
+
+
+def test_packaged_brand_asset_is_present() -> None:
+    logo = Path(logsalvo.__file__).with_name("assets") / "tts-round-outline.png"
+    assert logo.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
 
 
 @pytest.mark.parametrize(

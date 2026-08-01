@@ -2,6 +2,20 @@
 
 All notable changes to LogSalvo are documented here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [2.1.0] - 2026-08-01
+
+### Added
+
+- The Tech Shed logo, application icon, and navy/cyan/teal visual identity.
+- Branded application header, version badge, state-aware status display, footer, and About dialog.
+- Centralized product name, semantic version, and copyright metadata.
+- `logsalvo --version` CLI output.
+
+### Changed
+
+- Updated package, application, and documentation copyright to The Tech Shed for 2025-2026.
+- Included the original high-resolution logo as packaged application data.
+
 ## [2.0.0] - 2026-08-01
 
 ### Added
@@ -50,6 +64,7 @@ All notable changes to LogSalvo are documented here. The project follows [Semant
 
 - Initial UDP-based random syslog sender.
 
-[2.0.0]: https://github.com/willcurtis/syslog-sender/compare/6d298f3c...v2.0.0
+[2.1.0]: https://github.com/willcurtis/syslog-sender/compare/e10ab32...v2.1.0
+[2.0.0]: https://github.com/willcurtis/syslog-sender/compare/6d298f3c...e10ab32
 [1.1.0]: https://github.com/willcurtis/syslog-sender/commits/6d298f3c
 [1.0.0]: https://github.com/willcurtis/syslog-sender/commits/a760f95c

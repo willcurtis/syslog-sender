@@ -1,6 +1,10 @@
 # LogSalvo
 
+<img src="https://raw.githubusercontent.com/willcurtis/syslog-sender/main/logsalvo/assets/tts-round-outline.png" alt="The Tech Shed logo" width="180">
+
 LogSalvo is a cross-platform Python application for generating controlled syslog traffic when testing collectors, SIEM platforms, firewall rules, parsers, alerts, and log pipelines. Version 2 provides both a command-line interface and a PySide6 desktop GUI over the same tested sender core.
+
+LogSalvo uses The Tech Shed visual identity: deep navy, cyan and teal. The supplied logo is packaged into the desktop application and used as its window icon and About artwork.
 
 ## Highlights
 
@@ -105,6 +109,12 @@ usage: logsalvo [-h] [-p PORT] [--transport {udp,tcp}] [--tls]
                      [-n COUNT] [--duration DURATION]
                      [--rate RATE | --delay DELAY] [--dry-run] [--echo]
                      target
+```
+
+Display the installed version and copyright information with:
+
+```bash
+logsalvo --version
 ```
 
 ### Connection options
@@ -351,3 +361,5 @@ The legacy `syslog_sender.py` and standalone `syslog-pro.py` have been removed. 
 ## License
 
 LogSalvo is released under the [MIT License](LICENSE).
+
+Copyright © 2025–2026 The Tech Shed. LogSalvo version 2.1.0.

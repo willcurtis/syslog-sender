@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "logsalvo"
-version = "2.0.0"
-description = "Standards-aware syslog traffic generator with CLI and desktop GUI"
+version = "2.1.0"
+description = "LogSalvo standards-aware syslog traffic generator with CLI and desktop GUI"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -36,6 +36,9 @@ Issues = "https://github.com/willcurtis/syslog-sender/issues"
 
 [tool.setuptools]
 packages = ["logsalvo"]
+
+[tool.setuptools.package-data]
+logsalvo = ["assets/*.png"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
