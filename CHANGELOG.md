@@ -8,6 +8,7 @@ All notable changes to LogSalvo are documented here. The project follows [Semant
 
 - Expandable received-log view that gives the message table substantially more vertical space while retaining filters and capture actions.
 - One-click layout restoration, including the previous table and message-detail splitter proportions.
+- Reproducible macOS packaging for unsigned Apple silicon and Intel development DMGs, including drag-to-Applications installation, checksums, CI verification, and prerelease publishing.
 
 ## [2.5.1] - 2026-08-02
 

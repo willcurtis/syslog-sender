@@ -1,0 +1,96 @@
+name: macOS Development DMG
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/macos-dev-dmg.yml"
+      - "logsalvo/**"
+      - "packaging/macos/**"
+      - "pyproject.toml"
+  push:
+    tags:
+      - "v*-dev.*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }} DMG
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install packaging dependencies
+        run: python -m pip install '.[gui]' 'pyinstaller==6.21.0'
+      - name: Verify runner architecture
+        run: test "$(uname -m)" = "${{ matrix.arch }}"
+      - name: Build unsigned development DMG
+        run: packaging/macos/build-dmg.sh
+      - name: Verify DMG contents
+        run: |
+          DMG="$(find dist -maxdepth 1 -name '*.dmg' -print -quit)"
+          MOUNT="$(mktemp -d)"
+          cleanup() {
+            hdiutil detach "$MOUNT" >/dev/null 2>&1 || true
+            rmdir "$MOUNT" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          hdiutil attach "$DMG" -readonly -nobrowse -mountpoint "$MOUNT"
+          test -d "$MOUNT/LogSalvo.app"
+          test -L "$MOUNT/Applications"
+          (cd dist && shasum -a 256 -c "$(basename "$DMG").sha256")
+      - uses: actions/upload-artifact@v6
+        with:
+          name: LogSalvo-macOS-${{ matrix.arch }}-unsigned
+          path: |
+            dist/*.dmg
+            dist/*.sha256
+          if-no-files-found: error
+
+  publish-development-release:
+    name: Publish development release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: LogSalvo-macOS-*-unsigned
+          path: release-assets
+          merge-multiple: true
+      - name: Publish unsigned prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > release-notes.md <<'NOTES'
+          Unsigned development build of LogSalvo for macOS.
+
+          Download the DMG matching your Mac:
+
+          - `arm64` for Apple silicon (M1 and newer)
+          - `x86_64` for Intel Macs
+
+          Open the DMG and drag LogSalvo into Applications. Because this development build is not signed with an Apple Developer ID or notarised by Apple, macOS may block the first launch. Control-click LogSalvo, select **Open**, then confirm **Open**. Only install artifacts downloaded from this official repository.
+
+          SHA-256 checksum files are included for both DMGs.
+          NOTES
+          gh release create "$GITHUB_REF_NAME" release-assets/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --prerelease \
+            --title "LogSalvo ${GITHUB_REF_NAME#v} (Unsigned macOS Development Build)" \
+            --notes-file release-notes.md
