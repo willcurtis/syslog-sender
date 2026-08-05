@@ -5,7 +5,7 @@ import pytest
 import logsalvo
 from logsalvo import __copyright__, __version__
 from logsalvo.cli import parser
-from logsalvo.gui import THEME_STYLESHEETS, ordered_bind_addresses
+from logsalvo.gui import THEME_STYLESHEETS, newest_visible_source_row, ordered_bind_addresses
 from logsalvo.models import FACILITIES, RunConfig, SenderConfig, named_number
 
 
@@ -46,6 +46,16 @@ def test_bind_addresses_are_deduplicated_and_ordered() -> None:
     addresses = ordered_bind_addresses(["192.0.2.20", "::1", "10.0.0.4", "192.0.2.20"])
     assert addresses[:4] == ["0.0.0.0", "::", "127.0.0.1", "::1"]
     assert addresses[4:] == ["10.0.0.4", "192.0.2.20"]
+
+
+def test_newest_visible_receiver_row_respects_filters_and_recent_batch() -> None:
+    visible_rows = {1, 3, 7}
+    is_visible = visible_rows.__contains__
+
+    assert newest_visible_source_row(8, 8, is_visible) == 7
+    assert newest_visible_source_row(8, 3, is_visible) == 7
+    assert newest_visible_source_row(8, 1, is_visible) == 7
+    assert newest_visible_source_row(9, 1, is_visible) is None
 
 
 @pytest.mark.parametrize(

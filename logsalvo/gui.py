@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import socket
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 from . import __app_name__, __copyright__, __version__
@@ -379,6 +380,19 @@ def ordered_bind_addresses(addresses: list[str]) -> list[str]:
         key=lambda address: (":" in address, address.casefold()),
     )
     return preferred + remainder
+
+
+def newest_visible_source_row(
+    row_count: int,
+    candidate_count: int,
+    is_visible: Callable[[int], bool],
+) -> int | None:
+    """Return the newest visible source row among recently appended candidates."""
+    first_candidate = max(0, row_count - max(0, candidate_count))
+    for row in range(row_count - 1, first_candidate - 1, -1):
+        if is_visible(row):
+            return row
+    return None
 
 
 def main() -> int:
@@ -1070,6 +1084,7 @@ def main() -> int:
             self.receiver_table.setModel(self.receiver_proxy)
             self.receiver_table.setAlternatingRowColors(True)
             self.receiver_table.setSortingEnabled(True)
+            self.receiver_table.sortByColumn(0, Qt.SortOrder.DescendingOrder)
             self.receiver_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
             self.receiver_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
             self.receiver_table.verticalHeader().setVisible(False)
@@ -1247,8 +1262,25 @@ def main() -> int:
                     del self.receiver_pending[: len(self.receiver_pending) - maximum]
             else:
                 self.receiver_model.add_message(message)
-                self.receiver_table.scrollToBottom()
+                self.scroll_to_latest_receiver_message()
             self.update_receiver_summary()
+
+        def scroll_to_latest_receiver_message(self, candidate_count: int = 1) -> None:
+            row_count = self.receiver_model.rowCount()
+
+            def proxy_index_for(source_row: int) -> QModelIndex:
+                return self.receiver_proxy.mapFromSource(self.receiver_model.index(source_row, 0))
+
+            source_row = newest_visible_source_row(
+                row_count,
+                candidate_count,
+                lambda row: proxy_index_for(row).isValid(),
+            )
+            if source_row is not None:
+                self.receiver_table.scrollTo(
+                    proxy_index_for(source_row),
+                    QAbstractItemView.ScrollHint.EnsureVisible,
+                )
 
         @Slot(str)
         def receiver_error(self, error: str) -> None:
@@ -1267,7 +1299,7 @@ def main() -> int:
                 pending, self.receiver_pending = self.receiver_pending, []
                 for message in pending:
                     self.receiver_model.add_message(message)
-                self.receiver_table.scrollToBottom()
+                self.scroll_to_latest_receiver_message(len(pending))
             self.update_receiver_summary()
 
         @Slot()
