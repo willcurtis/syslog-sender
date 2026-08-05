@@ -2,6 +2,13 @@
 
 All notable changes to LogSalvo are documented here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [2.6.1] - 2026-08-05
+
+### Fixed
+
+- Incoming receiver events now remain visible when the table is sorted newest-first instead of jumping to the oldest event.
+- Auto-follow maps newly appended source rows through the active sort and filters, including batches added after resuming a paused display.
+
 ## [2.6.0] - 2026-08-02
 
 ### Added
@@ -185,6 +192,7 @@ All notable changes to LogSalvo are documented here. The project follows [Semant
 
 - Initial UDP-based random syslog sender.
 
+[2.6.1]: https://github.com/willcurtis/logsalvo/compare/v2.6.0...v2.6.1
 [2.6.0]: https://github.com/willcurtis/logsalvo/compare/v2.5.1...v2.6.0
 [2.5.1]: https://github.com/willcurtis/logsalvo/compare/v2.5.0...v2.5.1
 [2.5.0]: https://github.com/willcurtis/logsalvo/compare/v2.4.2...v2.5.0
