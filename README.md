@@ -404,17 +404,22 @@ logsalvo/
 └── transports.py   UDP, TCP, TLS, framing, and address binding
 ```
 
-## Building a desktop executable
+## Building the macOS application
 
-PyInstaller can create a standalone executable. Install it alongside the GUI extra, then run:
+The macOS packaging workflow builds architecture-specific, unsigned development DMGs for Apple silicon (`arm64`) and Intel (`x86_64`) Macs. Each disk image contains `LogSalvo.app` and an Applications shortcut for drag-and-drop installation.
+
+Build on a Mac using the machine's native architecture:
 
 ```bash
-python -m pip install '.[gui]' pyinstaller
-pyinstaller --windowed --name logsalvo-gui \
-  --collect-all PySide6 "$(command -v logsalvo-gui)"
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install '.[gui]' 'pyinstaller==6.21.0'
+packaging/macos/build-dmg.sh
 ```
 
-PyInstaller options and signing/notarization requirements differ by operating system. Build and test on each target platform rather than cross-compiling.
+The DMG and its SHA-256 checksum are written to `dist/`. GitHub Actions also builds both architectures on packaging-related pull requests. Pushing a development tag matching `v*-dev.*` publishes both DMGs as a GitHub prerelease.
+
+Unsigned development builds are not notarised by Apple and may be blocked on first launch. After confirming that the DMG came from the official LogSalvo repository, Control-click the application, select **Open**, and confirm **Open**. Production distribution should use a Developer ID Application certificate, hardened-runtime signing, notarisation, and stapling.
 
 ## Migrating from the old scripts
 
